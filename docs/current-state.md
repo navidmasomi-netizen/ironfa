@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `8e05f1d`
-- Commit message: `Reset workout form on program and day switches`
+- Latest implementation commit: `1f74159`
+- Commit message: `Use completed history in progress stats`
 
 ---
 
@@ -41,6 +41,7 @@ The project now has:
 - switching programs now clears the active workout draft instead of mixing sessions across plans
 - invalid weight entries are blocked in the progress tab
 - switching programs or days now resets the active workout form so stale values do not leak into a new context
+- progress tab stats now read only completed workout history, not the active workout draft
 
 The project is now in:
 - implementation
@@ -332,6 +333,7 @@ Implemented:
 - persisted weight progress
 - average prescription adherence
 - last-session prescription adherence
+- progress metrics now ignore unfinished workout drafts
 
 ### N. AI Prompt Sync
 The AI prompt is now aligned with the newer user model.
@@ -437,6 +439,7 @@ These are active enough to be considered real implemented baselines:
 - safer program switching without cross-plan draft leakage
 - safer progress weight entry validation
 - safer program/day switching without stale form carry-over
+- progress analytics now align with completed-history-only persistence
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:

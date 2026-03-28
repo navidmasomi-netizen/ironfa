@@ -76,45 +76,91 @@ function sanitizeProgressData(entries, fallback = []) {
     .filter(entry => entry.weight > 0);
 }
 
-function normalizePersistedUser(user) {
-  if (!user) return null;
-  const trainingLevel = user.training_level || user.level || "مبتدی";
-  const sex = user.sex || user.gender || "مرد";
-  const trainingDays = Number(user.training_days_per_week || user.workoutDays || 3);
-  const sessionDuration = Number(user.session_duration || user.sessionLength || 60);
-  const equipmentAccess = user.equipment_access || ({
-    "باشگاه": "باشگاه کامل",
-    "خانه": "هوم جیم",
-    "ترکیبی": "دمبل و کش",
+function normalizePersistedLevel(value) {
+  return ({
+    beginner: "مبتدی",
+    intermediate: "متوسط",
+    advanced: "پیشرفته",
+    مبتدی: "مبتدی",
+    متوسط: "متوسط",
+    پیشرفته: "پیشرفته",
+  }[value] || "مبتدی");
+}
+
+function normalizePersistedSex(value) {
+  return ({
+    male: "مرد",
+    female: "زن",
+    مرد: "مرد",
+    زن: "زن",
+  }[value] || "مرد");
+}
+
+function normalizePersistedEquipment(value) {
+  return ({
+    full_gym: "باشگاه کامل",
+    home_gym: "هوم جیم",
+    dumbbells_bands: "دمبل و کش",
+    bodyweight: "وزن بدن",
+    باشگاه: "باشگاه کامل",
+    "باشگاه کامل": "باشگاه کامل",
+    خانه: "هوم جیم",
+    "هوم جیم": "هوم جیم",
+    ترکیبی: "دمبل و کش",
+    "دمبل و کش": "دمبل و کش",
     "فضای باز": "وزن بدن",
-  }[user.place] || "باشگاه کامل");
-  const recoveryQuality = user.recovery_quality || ({
+    "وزن بدن": "وزن بدن",
+  }[value] || "باشگاه کامل");
+}
+
+function normalizePersistedRecovery(value, sleepQuality, stressLevel) {
+  if (value) {
+    return ({
+      low: "پایین",
+      medium: "متوسط",
+      high: "بالا",
+      پایین: "پایین",
+      متوسط: "متوسط",
+      بالا: "بالا",
+    }[value] || "متوسط");
+  }
+  return ({
     "ضعیف": "پایین",
     "کم": "بالا",
     "خوب": "بالا",
     "عالی": "بالا",
     "زیاد": "پایین",
-  }[user.sleepQuality] || {
+  }[sleepQuality] || {
     "زیاد": "پایین",
     "کم": "بالا",
-  }[user.stressLevel] || "متوسط");
-  const limitations = user.injury_or_limitation_flags || (user.injury ? (Array.isArray(user.injury) ? user.injury : [user.injury]) : ["ندارم"]);
+  }[stressLevel] || "متوسط");
+}
+
+function normalizePersistedLimitations(limitations, injury) {
+  if (Array.isArray(limitations) && limitations.length) return limitations;
+  if (injury) return Array.isArray(injury) ? injury : [injury];
+  return ["ندارم"];
+}
+
+function normalizePersistedUser(user) {
+  if (!user) return null;
+  const trainingLevel = normalizePersistedLevel(user.training_level || user.level);
+  const sex = normalizePersistedSex(user.sex || user.gender);
+  const trainingDays = Number(user.training_days_per_week || user.workoutDays || 3);
+  const sessionDuration = Number(user.session_duration || user.sessionLength || 60);
+  const equipmentAccess = normalizePersistedEquipment(user.equipment_access || user.place);
+  const recoveryQuality = normalizePersistedRecovery(user.recovery_quality, user.sleepQuality, user.stressLevel);
+  const limitations = normalizePersistedLimitations(user.injury_or_limitation_flags, user.injury);
 
   return {
     ...user,
     training_level: trainingLevel,
-    level: trainingLevel,
     sex,
-    gender: sex,
     training_days_per_week: trainingDays,
-    workoutDays: trainingDays,
     session_duration: sessionDuration,
-    sessionLength: sessionDuration,
     equipment_access: equipmentAccess,
     recovery_quality: recoveryQuality,
     injury_or_limitation_flags: limitations,
-    injury: limitations,
-    goal_label: user.goal_label || user.goal,
   };
 }
 
@@ -723,7 +769,7 @@ const EXERCISES = [
 ];
 
 const getExercisePrimaryMuscle = (exercise) => exercise.primary_muscles?.[0] || exercise.muscle || "نامشخص";
-const getExerciseDifficulty = (exercise) => exercise.difficulty || exercise.level || "مبتدی";
+const getExerciseDifficulty = (exercise) => exercise.difficulty || "مبتدی";
 const getExerciseEquipment = (exercise) => exercise.equipment || "نامشخص";
 const getExerciseGoalsLabel = (exercise) => (exercise.suitable_goals || []).map(goal => ({
   hypertrophy: "حجم",

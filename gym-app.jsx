@@ -596,7 +596,7 @@ const EXERCISES = [
     equipment: "هالتر", difficulty: "متوسط", complexity: "compound",
     suitable_goals: ["hypertrophy", "strength", "recomposition"], contraindications: ["زانو", "کمر پایین"],
     joint_stress_flags: ["knee_stress", "lower_back_stress"], default_rep_range: "3-8", default_rest_range: "120-180 ثانیه",
-    progression_type: "load", substitution_list: ["پرس پا", "لانج"], muscle: "پا", level: "متوسط",
+    progression_type: "load", substitution_list: ["پرس پا", "لانج"],
     desc: "پادشاه حرکات پایه — زانوها بیرون، کمر صاف، تا موازی پایین برو.", gif: "🏋️"
   },
   {
@@ -605,7 +605,7 @@ const EXERCISES = [
     equipment: "هالتر", difficulty: "پیشرفته", complexity: "compound",
     suitable_goals: ["strength", "hypertrophy"], contraindications: ["کمر پایین"],
     joint_stress_flags: ["lower_back_stress"], default_rep_range: "3-6", default_rest_range: "150-210 ثانیه",
-    progression_type: "load", substitution_list: ["رومانیایی"], muscle: "پشت", level: "پیشرفته",
+    progression_type: "load", substitution_list: ["رومانیایی"],
     desc: "کمر صاف، باسن به عقب، هالتر نزدیک ساق پا بکش بالا.", gif: "💪"
   },
   {
@@ -614,7 +614,7 @@ const EXERCISES = [
     equipment: "هالتر", difficulty: "مبتدی", complexity: "compound",
     suitable_goals: ["hypertrophy", "strength", "recomposition"], contraindications: ["شانه", "مچ"],
     joint_stress_flags: ["shoulder_stress", "wrist_stress"], default_rep_range: "4-10", default_rest_range: "90-150 ثانیه",
-    progression_type: "load", substitution_list: ["پرس سرشانه", "پشت بازو سیمکش"], muscle: "سینه", level: "مبتدی",
+    progression_type: "load", substitution_list: ["پرس سرشانه", "پشت بازو سیمکش"],
     desc: "آرنج ۴۵ درجه، کنترل در پایین، انفجاری بالا بیار.", gif: "🔥"
   },
   {
@@ -623,7 +623,7 @@ const EXERCISES = [
     equipment: "میله", difficulty: "متوسط", complexity: "compound",
     suitable_goals: ["hypertrophy", "strength", "recomposition"], contraindications: ["شانه", "آرنج"],
     joint_stress_flags: ["shoulder_stress"], default_rep_range: "4-10", default_rest_range: "90-150 ثانیه",
-    progression_type: "reps_then_load", substitution_list: ["جلو بازو"], muscle: "پشت", level: "متوسط",
+    progression_type: "reps_then_load", substitution_list: ["جلو بازو"],
     desc: "از آویزان کامل شروع کن، کتف‌ها را جمع کن، چانه بالای میله.", gif: "⬆️"
   },
   {
@@ -632,7 +632,7 @@ const EXERCISES = [
     equipment: "هالتر", difficulty: "متوسط", complexity: "compound",
     suitable_goals: ["hypertrophy", "strength", "recomposition"], contraindications: ["شانه", "کمر پایین"],
     joint_stress_flags: ["shoulder_stress"], default_rep_range: "4-8", default_rest_range: "90-150 ثانیه",
-    progression_type: "load", substitution_list: ["پرس سینه"], muscle: "سرشانه", level: "متوسط",
+    progression_type: "load", substitution_list: ["پرس سینه"],
     desc: "هسته محکم، هالتر را مستقیم بالا ببر، سر جلو نره.", gif: "🎯"
   },
   {
@@ -641,7 +641,7 @@ const EXERCISES = [
     equipment: "دمبل", difficulty: "مبتدی", complexity: "isolation",
     suitable_goals: ["hypertrophy", "fat_loss", "recomposition"], contraindications: ["آرنج", "مچ"],
     joint_stress_flags: ["wrist_stress"], default_rep_range: "8-15", default_rest_range: "45-75 ثانیه",
-    progression_type: "reps_then_load", substitution_list: ["پول‌آپ"], muscle: "بازو", level: "مبتدی",
+    progression_type: "reps_then_load", substitution_list: ["پول‌آپ"],
     desc: "آرنج ثابت، کامل باز کن، در بالا فشار بده.", gif: "💪"
   },
   {
@@ -650,7 +650,7 @@ const EXERCISES = [
     equipment: "دستگاه", difficulty: "مبتدی", complexity: "isolation",
     suitable_goals: ["hypertrophy", "fat_loss", "recomposition"], contraindications: ["آرنج"],
     joint_stress_flags: ["elbow_stress"], default_rep_range: "10-15", default_rest_range: "45-75 ثانیه",
-    progression_type: "reps_then_load", substitution_list: ["پرس سینه"], muscle: "بازو", level: "مبتدی",
+    progression_type: "reps_then_load", substitution_list: ["پرس سینه"],
     desc: "آرنج ثابت کنار بدن، کامل باز کن، کنترل برگرد.", gif: "🎯"
   },
   {
@@ -659,7 +659,7 @@ const EXERCISES = [
     equipment: "دمبل", difficulty: "مبتدی", complexity: "compound",
     suitable_goals: ["hypertrophy", "fat_loss", "recomposition"], contraindications: ["زانو", "تعادل"],
     joint_stress_flags: ["knee_stress"], default_rep_range: "8-12", default_rest_range: "60-90 ثانیه",
-    progression_type: "reps_then_load", substitution_list: ["پرس پا", "اسکوات"], muscle: "پا", level: "مبتدی",
+    progression_type: "reps_then_load", substitution_list: ["پرس پا", "اسکوات"],
     desc: "گام بلند بردار، زانو به زمین نزنه، تنه صاف.", gif: "🦵"
   },
   {
@@ -668,7 +668,7 @@ const EXERCISES = [
     equipment: "بدون ابزار", difficulty: "مبتدی", complexity: "isolation",
     suitable_goals: ["fat_loss", "hypertrophy", "recomposition"], contraindications: ["گردن"],
     joint_stress_flags: ["neck_stress"], default_rep_range: "12-20", default_rest_range: "30-45 ثانیه",
-    progression_type: "reps", substitution_list: ["پلانک"], muscle: "شکم", level: "مبتدی",
+    progression_type: "reps", substitution_list: ["پلانک"],
     desc: "پشت خم نشه، شکم را سفت کن، آهسته پایین بیا.", gif: "⚡"
   },
   {
@@ -677,7 +677,7 @@ const EXERCISES = [
     equipment: "بدون ابزار", difficulty: "مبتدی", complexity: "isolation",
     suitable_goals: ["fat_loss", "recomposition", "strength"], contraindications: ["شانه", "کمر پایین"],
     joint_stress_flags: ["shoulder_stress"], default_rep_range: "20-60 ثانیه", default_rest_range: "30-45 ثانیه",
-    progression_type: "time", substitution_list: ["کرانچ"], muscle: "کور", level: "مبتدی",
+    progression_type: "time", substitution_list: ["کرانچ"],
     desc: "بدن مثل خط‌کش، باسن بالا نره، نفس بکش.", gif: "🧱"
   },
   {
@@ -686,7 +686,7 @@ const EXERCISES = [
     equipment: "هالتر", difficulty: "متوسط", complexity: "compound",
     suitable_goals: ["hypertrophy", "strength", "recomposition"], contraindications: ["کمر پایین"],
     joint_stress_flags: ["lower_back_stress"], default_rep_range: "6-10", default_rest_range: "90-150 ثانیه",
-    progression_type: "load", substitution_list: ["ددلیفت", "لانج"], muscle: "پشت ران", level: "متوسط",
+    progression_type: "load", substitution_list: ["ددلیفت", "لانج"],
     desc: "زانو کمی خم، لگن را به عقب ببر، کمر صاف بمونه.", gif: "🏆"
   },
   {
@@ -695,7 +695,7 @@ const EXERCISES = [
     equipment: "دستگاه", difficulty: "مبتدی", complexity: "compound",
     suitable_goals: ["hypertrophy", "fat_loss", "recomposition"], contraindications: ["زانو", "کمر پایین"],
     joint_stress_flags: ["knee_stress"], default_rep_range: "8-15", default_rest_range: "75-120 ثانیه",
-    progression_type: "load", substitution_list: ["اسکوات", "لانج"], muscle: "پا", level: "مبتدی",
+    progression_type: "load", substitution_list: ["اسکوات", "لانج"],
     desc: "پاها عرض شانه، کمر به تکیه‌گاه، کامل باز نکن.", gif: "🦵"
   },
 ];

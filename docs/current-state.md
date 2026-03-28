@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `7220fe0`
-- Commit message: `Add full plan explanation layer`
+- Latest implementation commit: `d90c5bf`
+- Commit message: `Explain workout progression and completion feedback`
 
 ---
 
@@ -35,6 +35,7 @@ The project now has:
 - stronger runtime stability around persisted state and restored sessions
 - separation between active workout draft and persisted workout history
 - a full explanation layer for why the current program was selected and what may change it
+- deeper explainability inside workout progression and completion feedback
 
 The project is now in:
 - implementation
@@ -255,6 +256,7 @@ Implemented:
 - quick per-movement progress display against target sets
 - visible progression strategy labels for the active movement
 - recent adherence and rep averages inside the progression block
+- explanation text for why progression is holding, consolidating, or increasing
 
 ### I. Logging Interaction Baseline
 Logging is no longer a raw form only.
@@ -281,6 +283,7 @@ Implemented:
 - prescription adherence summary in the popup
 - completion guidance tone and copy now adapt to adherence quality
 - completion guidance can tell the user to finish the current day before moving on
+- completion popup now explains why that next-step guidance was chosen
 
 ### K. Persistence
 Core workout loop data is now persisted.
@@ -347,6 +350,14 @@ Implemented:
 - clear reasons tied to goal, frequency, recovery, equipment, and limitations
 - explanation of what later changes may hold, consolidate, or progress the plan
 
+### Q. Workout Explainability Layer
+The workout loop now explains decision-making, not just outcomes.
+
+Implemented:
+- explanation text for progression strategy inside the workout screen
+- explanation text for completion guidance inside the end-of-workout popup
+- clear distinction between hold, consolidate, increase reps, and increase load reasoning
+
 ---
 
 ## 6. Recent Hardening and Cleanup Work
@@ -399,11 +410,11 @@ These are active enough to be considered real implemented baselines:
 - history-aware progression guidance
 - runtime state hardening for persisted data and restored flow
 - separated active workout draft from persisted history
+- deeper explainability inside workout feedback
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:
 - deeper volume auto-adjustment
-- full plan explanation layer
 - full removal of all legacy aliases
 
 ---
@@ -444,6 +455,8 @@ The runtime layer now also cleans and stabilizes persisted data before using it 
 
 The program layer now also explains why the current recommendation was chosen and what future behavior may change it.
 
+The workout layer now also explains why it suggests holding, consolidating, or progressing, and why the completion popup gives a particular next-step message.
+
 ---
 
 ## 9. Current Real Product Loop
@@ -470,6 +483,7 @@ The current MVP backbone now looks like this:
 18. app sanitizes persisted state and corrects invalid restored selections
 19. progress tab reflects adherence and session-level progress
 20. programs tab explains why the current recommendation was chosen and what may change it
+21. workout loop explains why progression and completion guidance were chosen
 
 This is the strongest implemented loop so far.
 
@@ -493,6 +507,7 @@ Stable enough:
 - runtime stability around persisted data
 - persistence for key loop data
 - explainable recommendation layer
+- explainable workout feedback layer
 - progress tab baseline
 - normalized runtime user approach
 - trust/disclaimer baseline
@@ -530,7 +545,7 @@ The most logical next work items are:
 2. connect progress history more strongly to goal-specific outcomes
 3. reduce remaining compatibility debt
 4. keep hardening the current loop with runtime verification
-5. improve explanation of why the plan is progressing, holding, or consolidating inside workout feedback too
+5. connect explainability more directly to auto-adjustments over time
 
 ---
 
@@ -545,7 +560,7 @@ Recommended next focus:
 If continuing from the current momentum, the best next topic is:
 - progression-aware behavior beyond the current hint layer
 or
-- deeper explainability inside workout/progression feedback
+- auto-updating prescription behavior from accumulated session history
 
 ---
 
@@ -613,6 +628,7 @@ The project now has:
 - prescription adherence tracking
 - progression-aware workout guidance
 - explainable recommendation layer
+- explainable workout feedback layer
 - trust/disclaimer product surfaces
 
 The project should now continue through focused implementation and hardening, not a return to broad planning.

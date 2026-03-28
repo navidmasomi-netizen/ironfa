@@ -201,6 +201,7 @@ Use this section to record issues found during the pass:
 - [x] Progress tab session stats now use completed workout history only.
 - [x] Invalid or stale restored exercise selections now reset the active workout form instead of carrying old values.
 - [x] Finishing a workout now stops the active rest timer instead of leaving it running behind the popup.
+- [x] The AI tab now visibly shows the active context being sent to the coach layer.
 
 ### Runtime Checks Still To Execute
 
@@ -208,4 +209,4 @@ Use this section to record issues found during the pass:
 - [ ] Real workout logging and completion pass with UI interaction.
 - [ ] Refresh/reload persistence pass during an active workout.
 - [ ] Post-completion restore pass with history/progress inspection.
-- [ ] AI tab runtime prompt/context sanity check.
+- [x] AI tab runtime prompt/context sanity check.

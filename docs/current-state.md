@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `06e6cd4`
-- Commit message: `Stop rest timer when finishing workout`
+- Latest implementation commit: `baf84b6`
+- Commit message: `Show active AI context in coach tab`
 
 ---
 
@@ -45,6 +45,7 @@ The project now has:
 - invalid restored or stale exercise selections now reset the active workout form instead of carrying old values
 - a local Vite runtime harness now exists for real browser verification
 - finishing a workout now also stops the active rest timer
+- the AI tab now visibly shows the active user/program/day context used for coaching prompts
 
 The project is now in:
 - implementation
@@ -358,6 +359,7 @@ Implemented:
 - uses active program/day context
 - uses filtered exercises context
 - trust boundary copy on the AI screen
+- visible AI context summary inside the AI tab
 
 ### O. Trust / Disclaimer Baseline
 Trust and disclaimer copy is now present in user-facing product surfaces.

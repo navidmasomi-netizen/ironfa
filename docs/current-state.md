@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `72496a8`
-- Commit message: `Add progression-aware workout guidance`
+- Latest implementation commit: `369f204`
+- Commit message: `Improve workout completion guidance from adherence`
 
 ---
 
@@ -29,6 +29,8 @@ The project now has:
 - early goal-specific programming behavior
 - trust and disclaimer baseline in user-facing surfaces
 - progression-aware workout guidance based on movement history
+- polished workout-screen guidance around prescription and adherence
+- completion guidance that changes based on adherence quality
 
 The project is now in:
 - implementation
@@ -239,8 +241,12 @@ Implemented:
 - active program display
 - active day context in workout flow
 - active prescription display in workout
+- active-day adherence and progress card
 - progression suggestion block for the active exercise
 - one-click autofill for the suggested next-session target
+- one-click autofill from the active prescription
+- one-click timer setup from the active prescription
+- quick per-movement progress display against target sets
 
 ### I. Logging Interaction Baseline
 Logging is no longer a raw form only.
@@ -265,6 +271,8 @@ Implemented:
 - next-step message
 - automatic next-day preparation when a program is active
 - prescription adherence summary in the popup
+- completion guidance tone and copy now adapt to adherence quality
+- completion guidance can tell the user to finish the current day before moving on
 
 ### K. Persistence
 Core workout loop data is now persisted.
@@ -354,13 +362,14 @@ These are active enough to be considered real implemented baselines:
 - prescription adherence tracking
 - trust/disclaimer baseline
 - progression-aware workout guidance
+- workout-screen prescription/adherence polish
+- adherence-aware completion guidance
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:
 - deeper progression logic beyond the current hint layer
 - deeper volume auto-adjustment
 - full plan explanation layer
-- richer workout-screen prescription UX
 - full removal of all legacy aliases
 
 ---
@@ -415,10 +424,11 @@ The current MVP backbone now looks like this:
 10. app shows save feedback
 11. app measures day coverage and prescription adherence
 12. app suggests the next progression target for the active exercise
-13. user completes workout
-14. app shows session summary and next-step guidance
-15. progress and logs persist across sessions
-16. progress tab reflects adherence and session-level progress
+13. workout screen shows active-day adherence, remaining work, and prescription actions
+14. user completes workout
+15. app shows session summary and adherence-aware next-step guidance
+16. progress and logs persist across sessions
+17. progress tab reflects adherence and session-level progress
 
 This is the strongest implemented loop so far.
 
@@ -436,6 +446,8 @@ Stable enough:
 - completion popup summary
 - adherence tracking
 - progression-aware workout guidance
+- workout-screen prescription guidance
+- adherence-aware completion feedback
 - persistence for key loop data
 - progress tab baseline
 - normalized runtime user approach
@@ -470,11 +482,11 @@ These should not be reopened without a strong reason.
 
 The most logical next work items are:
 
-1. improve workout-screen prescription UX
-2. add progression-aware updates over time
-3. connect progress history more strongly to goal-specific outcomes
-4. reduce remaining compatibility debt
-5. keep hardening the current loop with runtime verification
+1. add progression-aware updates over time
+2. connect progress history more strongly to goal-specific outcomes
+3. reduce remaining compatibility debt
+4. keep hardening the current loop with runtime verification
+5. improve explanation of why the plan is progressing or being held back
 
 ---
 
@@ -489,7 +501,7 @@ Recommended next focus:
 If continuing from the current momentum, the best next topic is:
 - progression-aware behavior beyond the current hint layer
 or
-- workout screen polish around prescriptions, adherence, and progression hints
+- runtime hardening and verification of the current loop
 
 ---
 

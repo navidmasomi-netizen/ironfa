@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `16ca079`
-- Commit message: `Add long-term volume management rules`
+- Latest implementation commit: `3863fdc`
+- Commit message: `Migrate persisted users to canonical shape`
 
 ---
 
@@ -61,6 +61,7 @@ The project now has:
 - active runtime paths no longer rely on leftover `level` / `gender` / `workoutDays` / `sessionLength` / `program.level` style aliases
 - prescription logic now also manages training volume across multiple weeks, not only short-horizon history
 - a broader bug sweep across the latest adaptive, AI, progress, and persistence waves did not reveal a new blocking regression
+- persisted auth data is now migrated into the canonical user shape, so legacy aliases no longer need to survive beyond the one-time migration helper
 - release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
 - a final release regression checklist now exists for release-candidate gating
 - the final release regression checklist is now closed and the current build is considered acceptable as a release candidate
@@ -505,7 +506,6 @@ These are active enough to be considered real implemented baselines:
 ### Partially Implemented but Improving
 These are active but still baseline-level:
 - deeper volume auto-adjustment
-- full removal of all legacy aliases
 
 ---
 

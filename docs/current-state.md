@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `c0527a1`
-- Commit message: `Harden runtime state and persisted data handling`
+- Latest implementation commit: `684427a`
+- Commit message: `Separate active workout draft from workout history`
 
 ---
 
@@ -33,6 +33,7 @@ The project now has:
 - completion guidance that changes based on adherence quality
 - history-aware progression guidance based on multiple recent sessions
 - stronger runtime stability around persisted state and restored sessions
+- separation between active workout draft and persisted workout history
 
 The project is now in:
 - implementation
@@ -286,7 +287,8 @@ Implemented:
 - persisted session user
 - persisted active program
 - persisted active program day
-- persisted workout log
+- persisted workout history
+- separately persisted active workout draft
 - persisted progress data
 - sanitization of persisted workout logs before runtime use
 - sanitization of persisted progress entries before runtime use
@@ -301,6 +303,7 @@ Implemented:
 - auto-correct active exercise if the current selection is no longer valid
 - prevent invalid log entries with non-positive weight or reps
 - protect progress chart calculations when progress data is empty
+- separate current session draft from historical workout data
 
 ### M. Progress Tab Hardening
 The progress tab now uses more real session-derived data.
@@ -384,6 +387,7 @@ These are active enough to be considered real implemented baselines:
 - adherence-aware completion guidance
 - history-aware progression guidance
 - runtime state hardening for persisted data and restored flow
+- separated active workout draft from persisted history
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:
@@ -425,7 +429,7 @@ This means programs are no longer only split + exercise names. They now carry ba
 
 The workout layer now also uses recent history to suggest the next session target for the active movement, and can hold or consolidate instead of always pushing progression.
 
-The runtime layer now also cleans and stabilizes persisted data before using it inside the main loop.
+The runtime layer now also cleans and stabilizes persisted data before using it inside the main loop, and no longer mixes the active session draft with workout history.
 
 ---
 

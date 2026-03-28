@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `68d668d`
-- Commit message: `Make progression guidance history-aware`
+- Latest implementation commit: `c0527a1`
+- Commit message: `Harden runtime state and persisted data handling`
 
 ---
 
@@ -32,6 +32,7 @@ The project now has:
 - polished workout-screen guidance around prescription and adherence
 - completion guidance that changes based on adherence quality
 - history-aware progression guidance based on multiple recent sessions
+- stronger runtime stability around persisted state and restored sessions
 
 The project is now in:
 - implementation
@@ -287,8 +288,21 @@ Implemented:
 - persisted active program day
 - persisted workout log
 - persisted progress data
+- sanitization of persisted workout logs before runtime use
+- sanitization of persisted progress entries before runtime use
 
-### L. Progress Tab Hardening
+### L. Runtime Hardening
+The app is more resilient against stale or malformed local state.
+
+Implemented:
+- sanitize persisted workout log entries
+- sanitize persisted progress entries
+- clamp invalid selected program day back into a valid range
+- auto-correct active exercise if the current selection is no longer valid
+- prevent invalid log entries with non-positive weight or reps
+- protect progress chart calculations when progress data is empty
+
+### M. Progress Tab Hardening
 The progress tab now uses more real session-derived data.
 
 Implemented:
@@ -301,7 +315,7 @@ Implemented:
 - average prescription adherence
 - last-session prescription adherence
 
-### M. AI Prompt Sync
+### N. AI Prompt Sync
 The AI prompt is now aligned with the newer user model.
 
 Implemented:
@@ -311,7 +325,7 @@ Implemented:
 - uses filtered exercises context
 - trust boundary copy on the AI screen
 
-### N. Trust / Disclaimer Baseline
+### O. Trust / Disclaimer Baseline
 Trust and disclaimer copy is now present in user-facing product surfaces.
 
 Implemented:
@@ -369,6 +383,7 @@ These are active enough to be considered real implemented baselines:
 - workout-screen prescription/adherence polish
 - adherence-aware completion guidance
 - history-aware progression guidance
+- runtime state hardening for persisted data and restored flow
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:
@@ -410,6 +425,8 @@ This means programs are no longer only split + exercise names. They now carry ba
 
 The workout layer now also uses recent history to suggest the next session target for the active movement, and can hold or consolidate instead of always pushing progression.
 
+The runtime layer now also cleans and stabilizes persisted data before using it inside the main loop.
+
 ---
 
 ## 9. Current Real Product Loop
@@ -433,7 +450,8 @@ The current MVP backbone now looks like this:
 15. user completes workout
 16. app shows session summary and adherence-aware next-step guidance
 17. progress and logs persist across sessions
-18. progress tab reflects adherence and session-level progress
+18. app sanitizes persisted state and corrects invalid restored selections
+19. progress tab reflects adherence and session-level progress
 
 This is the strongest implemented loop so far.
 
@@ -454,6 +472,7 @@ Stable enough:
 - history-aware progression logic
 - workout-screen prescription guidance
 - adherence-aware completion feedback
+- runtime stability around persisted data
 - persistence for key loop data
 - progress tab baseline
 - normalized runtime user approach

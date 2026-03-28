@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `7fabcf1`
-- Commit message: `Broaden adaptive prescription adjustments`
+- Latest implementation commit: `ec0057a`
+- Commit message: `Add plateau and deload progression rules`
 
 ---
 
@@ -50,6 +50,7 @@ The project now has:
 - active UI paths now rely less on legacy display aliases and more on normalized goal/level helpers
 - core exercise objects no longer carry legacy `muscle` / `level` aliases
 - adaptive prescriptions now adjust rep range and rest range, not only sets and effort
+- progression now includes plateau reset and deload-aware rules
 
 The project is now in:
 - implementation
@@ -251,6 +252,8 @@ It now also supports:
 - simple next-session weight or rep suggestions
 - trend-aware suggestions that can hold, consolidate, or progress based on recent sessions
 - history-aware prescription adjustment notes inside the program itself
+- plateau reset behavior when a lift stalls despite stable adherence
+- short deload behavior when recent execution shows accumulated fatigue
 
 ### H. Workout Flow Backbone
 The workout flow is now program-aware and day-aware.

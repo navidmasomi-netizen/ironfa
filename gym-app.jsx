@@ -842,7 +842,9 @@ function getProgressionTrend(logs = []) {
       averageAdherence: null,
       recentConsistency: 0,
       stalled: false,
+      plateauRisk: false,
       needsConsolidation: false,
+      needsDeload: false,
       trendLabel: "no_data",
     };
   }
@@ -861,12 +863,24 @@ function getProgressionTrend(logs = []) {
     : null;
   const recentConsistency = recentLogs.filter(log => (Number(log.reps) || 0) > 0).length / recentLogs.length;
   const latestReps = Number(recentLogs[0]?.reps) || 0;
+  const latestWeight = Number(recentLogs[0]?.weight) || 0;
   const previousBestReps = Math.max(...recentLogs.slice(1).map(log => Number(log.reps) || 0), 0);
+  const previousBestWeight = Math.max(...recentLogs.slice(1).map(log => Number(log.weight) || 0), 0);
   const stalled = recentLogs.length >= 2 && latestReps <= previousBestReps;
   const needsConsolidation = averageAdherence !== null && averageAdherence < 0.7;
+  const needsDeload = recentLogs.length >= 3 && averageAdherence !== null && averageAdherence < 0.55;
+  const plateauRisk = !needsDeload
+    && !needsConsolidation
+    && recentLogs.length >= 3
+    && stalled
+    && averageAdherence !== null
+    && averageAdherence >= 0.8
+    && latestWeight >= previousBestWeight;
 
   let trendLabel = "stable";
-  if (needsConsolidation) trendLabel = "consolidate";
+  if (needsDeload) trendLabel = "deload";
+  else if (plateauRisk) trendLabel = "plateau";
+  else if (needsConsolidation) trendLabel = "consolidate";
   else if (!stalled && latestReps > previousBestReps) trendLabel = "advancing";
   else if (stalled) trendLabel = "stalled";
 
@@ -875,7 +889,9 @@ function getProgressionTrend(logs = []) {
     averageAdherence,
     recentConsistency,
     stalled,
+    plateauRisk,
     needsConsolidation,
+    needsDeload,
     trendLabel,
   };
 }
@@ -916,7 +932,17 @@ function getProgressionSuggestion(exercise, prescription, logs = []) {
   let message = `آخرین ثبت: ${lastWeight || "بدون وزن"}kg × ${lastReps} تکرار × ${lastSets} ست`;
   let strategy = "steady";
 
-  if (trend.needsConsolidation) {
+  if (trend.needsDeload) {
+    suggestedWeight = lastWeight > 0 ? Number((lastWeight * 0.9).toFixed(1)) : "";
+    suggestedReps = min;
+    strategy = "deload";
+    message = `چند جلسه اخیر فشار این حرکت خوب جمع نشده. یک deload کوتاه با ${suggestedWeight || "بار سبک‌تر"} و ${min}-${max} تکرار اجرا کن تا کیفیت حرکت برگردد.`;
+  } else if (trend.plateauRisk) {
+    suggestedWeight = lastWeight;
+    suggestedReps = Math.max(min, lastReps || min);
+    strategy = "plateau_reset";
+    message = `این حرکت چند جلسه است روی همین سطح گیر کرده. یک reset کنترل‌شده با همین بار و اجرای تمیز، قبل از فشار بیشتر منطقی‌تر است.`;
+  } else if (trend.needsConsolidation) {
     suggestedWeight = lastWeight;
     suggestedReps = Math.max(min, lastReps || min);
     strategy = "consolidate";
@@ -1032,6 +1058,12 @@ function getProgressionExplanation(progression) {
 
   if (progression.strategy === "consolidate") {
     return "دلیل این تصمیم: پایبندی چند جلسه اخیر پایین بوده و app فعلاً به‌جای افزایش، تثبیت اجرای نسخه را امن‌تر می‌داند.";
+  }
+  if (progression.strategy === "deload") {
+    return "دلیل این تصمیم: چند جلسه اخیر هم از نظر کیفیت ثبت و هم فشار کلی نشانه جمع‌شدن خستگی را داشته‌اند، پس app یک deload کوتاه را امن‌تر می‌داند.";
+  }
+  if (progression.strategy === "plateau_reset") {
+    return "دلیل این تصمیم: با وجود ثبت نسبتاً پایدار، حرکت روی همان سطح گیر کرده و app قبل از فشار بیشتر یک reset کنترل‌شده را منطقی‌تر می‌بیند.";
   }
   if (progression.strategy === "hold") {
     return "دلیل این تصمیم: عملکرد حرکت در چند ثبت اخیر جلو نرفته، پس app یک جلسه تثبیت با همین بار را ترجیح می‌دهد.";
@@ -1198,7 +1230,25 @@ function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = []
   const repRange = parseRepRange(prescription.rep_range);
   const restRange = parseRestRange(prescription.rest_range);
 
-  if (trend.needsConsolidation) {
+  if (trend.needsDeload) {
+    sets = Math.max(minSets, sets - 1);
+    if (repRange.min && repRange.max) {
+      rep_range = formatRepRange(repRange.min, Math.max(repRange.min, repRange.max - 2), prescription.rep_range);
+    }
+    if (restRange.min && restRange.max) {
+      rest_range = formatRestRange(restRange.min + 30, restRange.max + 30, prescription.rest_range);
+    }
+    effort = "4-5 RIR";
+    progression_state = "deload";
+    adjustment_note = "به‌خاطر جمع‌شدن خستگی در چند جلسه اخیر، این حرکت موقتاً سبک‌تر شده تا کیفیت اجرا و ریکاوری برگردد.";
+  } else if (trend.plateauRisk) {
+    if (restRange.min && restRange.max && !isIsolation) {
+      rest_range = formatRestRange(restRange.min + 15, restRange.max + 15, prescription.rest_range);
+    }
+    effort = "3 RIR";
+    progression_state = "plateau_reset";
+    adjustment_note = "این حرکت چند جلسه است روی یک سطح مانده، پس app فعلاً یک reset کنترل‌شده با فشار کمی پایین‌تر را ترجیح داده است.";
+  } else if (trend.needsConsolidation) {
     sets = Math.max(minSets, sets - 1);
     if (repRange.min && repRange.max && repRange.max - repRange.min >= 2) {
       rep_range = formatRepRange(repRange.min, repRange.max - 1, prescription.rep_range);
@@ -2756,12 +2806,16 @@ function GymApp({ user, onLogout }) {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                     {activeExerciseProgression.strategy && (
                       <span style={s.tag(
-                        activeExerciseProgression.strategy === "increase_load" ? "#0a8a2e"
+                        activeExerciseProgression.strategy === "deload" ? "#8a0a0a"
+                          : activeExerciseProgression.strategy === "plateau_reset" ? "#8a450a"
+                          : activeExerciseProgression.strategy === "increase_load" ? "#0a8a2e"
                           : activeExerciseProgression.strategy === "consolidate" ? "#b88400"
                           : activeExerciseProgression.strategy === "hold" ? "#8a450a"
                           : "#6d4cc2"
                       )}>
-                        {activeExerciseProgression.strategy === "increase_load" ? "افزایش وزنه"
+                        {activeExerciseProgression.strategy === "deload" ? "دیلود کوتاه"
+                          : activeExerciseProgression.strategy === "plateau_reset" ? "ریست پلاتو"
+                          : activeExerciseProgression.strategy === "increase_load" ? "افزایش وزنه"
                           : activeExerciseProgression.strategy === "increase_reps" ? "افزایش تکرار"
                           : activeExerciseProgression.strategy === "consolidate" ? "تثبیت اجرا"
                           : activeExerciseProgression.strategy === "hold" ? "نگه‌داشتن بار"

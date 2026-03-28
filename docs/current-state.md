@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `789f19c`
-- Commit message: `Add goal-specific progress interpretation`
+- Latest implementation commit: `f61db06`
+- Commit message: `Harden AI safety around limitations`
 
 ---
 
@@ -56,6 +56,7 @@ The project now has:
 - progression logic now also reads a longer cycle state and can switch between accumulate, intensify, stabilize, and reset phases
 - the progress tab now also summarizes trend direction for adherence, session volume, and weekly cadence instead of only showing raw stats
 - the progress tab now also interprets those trends differently for hypertrophy, strength, fat loss, and recomposition
+- the AI tab now switches into more conservative safety modes when the user profile or question suggests pain, injury, or limitations
 - release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
 - a final release regression checklist now exists for release-candidate gating
 
@@ -606,6 +607,7 @@ Stable enough:
 - progress tab baseline
 - richer trend analysis inside the progress tab
 - goal-specific progress interpretation inside the progress tab
+- limitation-aware AI safety shaping in both prompt construction and visible UI state
 - normalized runtime user approach
 - trust/disclaimer baseline
 
@@ -641,7 +643,7 @@ The most logical next work items are:
 2. reduce remaining compatibility debt
 3. keep hardening the current loop with runtime verification
 4. connect explainability more directly to long-cycle auto-adjustments over time
-5. improve safer limitation-aware AI response shaping
+5. strengthen release-candidate regression confidence
 
 ---
 
@@ -654,7 +656,7 @@ Recommended next focus:
 - keep working from `/Users/user/Desktop/Gym App/gym-app.jsx`
 
 If continuing from the current momentum, the best next topic is:
-- safer limitation-aware AI response shaping
+- deeper compatibility cleanup
 or
 - runtime verification of the current adaptive loop
 

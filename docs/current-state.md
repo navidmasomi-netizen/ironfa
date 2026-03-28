@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `7bd662a`
-- Commit message: `Harden verification edge cases`
+- Latest implementation commit: `8e05f1d`
+- Commit message: `Reset workout form on program and day switches`
 
 ---
 
@@ -40,6 +40,7 @@ The project now has:
 - adaptive plans now read only completed workout history, not the active workout draft
 - switching programs now clears the active workout draft instead of mixing sessions across plans
 - invalid weight entries are blocked in the progress tab
+- switching programs or days now resets the active workout form so stale values do not leak into a new context
 
 The project is now in:
 - implementation
@@ -262,6 +263,7 @@ Implemented:
 - visible progression strategy labels for the active movement
 - recent adherence and rep averages inside the progression block
 - explanation text for why progression is holding, consolidating, or increasing
+- switching program or day now resets weight/reps/sets instead of carrying stale draft values
 
 ### I. Logging Interaction Baseline
 Logging is no longer a raw form only.
@@ -434,6 +436,7 @@ These are active enough to be considered real implemented baselines:
 - adaptive plans driven only by completed workout history
 - safer program switching without cross-plan draft leakage
 - safer progress weight entry validation
+- safer program/day switching without stale form carry-over
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:

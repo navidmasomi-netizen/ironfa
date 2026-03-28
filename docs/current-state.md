@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `ec0057a`
-- Commit message: `Add plateau and deload progression rules`
+- Latest implementation commit: `92d5a69`
+- Commit message: `Record progression spot-check results`
 
 ---
 

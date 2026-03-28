@@ -980,6 +980,52 @@ function getCompletionGuidance({ adherence, currentProgramDay, nextDay, remainin
   };
 }
 
+function buildPlanExplanation(user, recommendedProgram) {
+  const normalizedUser = normalizePersistedUser(user);
+  const split = recommendedProgram?.split || {};
+  const reasons = [];
+  const adjustments = [];
+  const nextChecks = [];
+
+  reasons.push(`هدف فعلی تو ${normalizedUser.goal_label || normalizedUser.goal || "نامشخص"} است، بنابراین منطق برنامه روی ${recommendedProgram.programming_style || "پیشروی پایه"} تنظیم شده.`);
+  reasons.push(`${normalizedUser.training_days_per_week || "؟"} جلسه در هفته باعث شده split ${SPLIT_LABELS[split.split_family] || split.split_family || "فعلی"} انتخاب شود.`);
+
+  if (normalizedUser.session_duration <= 45) {
+    adjustments.push("مدت جلسه کوتاه‌تر است، پس حجم هر روز کمی جمع‌وجورتر نگه داشته شده.");
+  } else if (normalizedUser.session_duration >= 90) {
+    adjustments.push("مدت جلسه مناسب‌تر است، پس برنامه فضای بیشتری برای حرکات اصلی و ست‌های کامل‌تر دارد.");
+  }
+
+  if (normalizedUser.recovery_quality === "پایین") {
+    adjustments.push("به‌خاطر ریکاوری پایین، ساختار تمرین محافظه‌کارانه‌تر نگه داشته شده.");
+  } else if (normalizedUser.recovery_quality === "بالا") {
+    adjustments.push("ریکاوری بهتر اجازه داده split و prescription کمی تهاجمی‌تر بمانند.");
+  }
+
+  if ((normalizedUser.injury_or_limitation_flags || []).length > 0 && !normalizedUser.injury_or_limitation_flags.includes("ندارم")) {
+    adjustments.push(`به‌خاطر محدودیت‌های ${normalizedUser.injury_or_limitation_flags.join("، ")}, بعضی حرکت‌ها فیلتر یا جایگزین شده‌اند.`);
+  }
+
+  if (split.notes?.length) {
+    split.notes.forEach(note => adjustments.push(splitNoteToExplanation(note)));
+  }
+
+  nextChecks.push("اگر پایبندی روزهای فعال پایین بماند، progression به‌جای افزایش به حالت تثبیت یا نگه‌داشتن بار می‌رود.");
+  nextChecks.push("اگر ثبت‌ها کامل و پایدار باشند، app برای حرکت‌های اصلی افزایش تکرار یا وزنه را پیشنهاد می‌دهد.");
+
+  return { reasons, adjustments, nextChecks };
+}
+
+function splitNoteToExplanation(note) {
+  return ({
+    beginner_downgrade: "به‌خاطر سطح فعلی، split ساده‌تر انتخاب شده تا اجرای برنامه پایدار بماند.",
+    low_recovery_downgrade: "به‌خاطر ریکاوری پایین، ساختار تمرین سبک‌تر شده تا فشار اضافه جمع نشود.",
+    six_day_restricted: "حالت ۶ روزه برای این نسخه محدود شده تا loop فعلی قابل‌ریکاوری بماند.",
+    short_session_adjusted: "به‌خاطر زمان محدود هر جلسه، ساختار انتخابی فشرده‌تر و عملی‌تر شده.",
+    equipment_adjusted: "به‌خاطر محدودیت تجهیزات، انتخاب حرکت‌ها و ساختار روزها عملی‌تر شده است.",
+  }[note] || note);
+}
+
 function getPrescriptionRepRange(exercise, goal) {
   if (!exercise) return "8-12";
   if (goal === "hypertrophy") {
@@ -1906,6 +1952,7 @@ function GymApp({ user, onLogout }) {
   ];
   const planTrustCopy = "این خلاصه از روی هدف، سطح، تعداد جلسات، ریکاوری، تجهیزات و محدودیت‌های تو ساخته شده و برنامه پیشنهادی پایین بر همان اساس انتخاب شده است.";
   const planDisclaimerCopy = "اگر محدودیت یا درد واقعی داری، برنامه را محافظه‌کارانه اجرا کن و حرکات دردزا را حذف یا جایگزین کن.";
+  const planExplanation = buildPlanExplanation(runtimeUser, recommendedProgram);
   const activateProgram = (program) => {
     setSelectedProgram(program);
     setSelectedProgramDay(0);
@@ -2622,6 +2669,23 @@ function GymApp({ user, onLogout }) {
                 </div>
               )}
               <div style={{
+                background: dark ? "#17131f" : "#faf5ff",
+                border: "1px solid #6d4cc2",
+                borderRadius: 12,
+                padding: "12px 14px",
+                marginBottom: 10
+              }}>
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>چرا این برنامه برای تو انتخاب شد</div>
+                <div style={{ color: sub, fontSize: 12, lineHeight: 1.9 }}>
+                  {planExplanation.reasons.map((item, index) => (
+                    <div key={index}>• {item}</div>
+                  ))}
+                  {planExplanation.adjustments.map((item, index) => (
+                    <div key={`a-${index}`}>• {item}</div>
+                  ))}
+                </div>
+              </div>
+              <div style={{
                 background: dark ? "#121922" : "#f3f8ff",
                 border: `1px solid ${dark ? "#2b4157" : "#c7d9ef"}`,
                 borderRadius: 12,
@@ -2666,6 +2730,31 @@ function GymApp({ user, onLogout }) {
                   ))}
                 </div>
               )}
+              <div style={{
+                background: dark ? "#171717" : "#fff",
+                border: `1px solid ${border}`,
+                borderRadius: 10,
+                padding: "12px 14px",
+                marginBottom: 12
+              }}>
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>منطق انتخاب این پیشنهاد</div>
+                <div style={{ color: sub, fontSize: 12, lineHeight: 1.9, marginBottom: planExplanation.nextChecks.length ? 8 : 0 }}>
+                  {planExplanation.reasons.map((item, index) => (
+                    <div key={`r-${index}`}>• {item}</div>
+                  ))}
+                  {planExplanation.adjustments.map((item, index) => (
+                    <div key={`adj-${index}`}>• {item}</div>
+                  ))}
+                </div>
+                {planExplanation.nextChecks.length > 0 && (
+                  <div style={{ color: sub, fontSize: 12, lineHeight: 1.9, borderTop: `1px solid ${border}`, paddingTop: 8 }}>
+                    <div style={{ fontWeight: 700, color: text, marginBottom: 4 }}>چه چیزی بعداً این برنامه را تغییر می‌دهد</div>
+                    {planExplanation.nextChecks.map((item, index) => (
+                      <div key={`n-${index}`}>• {item}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {recommendedProgram.days.map((day, i) => (
                 <div key={i} style={{ background: dark ? "#1a1a1a" : "#fff", borderRadius: 10, padding: 12, marginBottom: 8 }}>
                   <div style={{ fontWeight: 700, marginBottom: 6, color: accent }}>{day.day}</div>

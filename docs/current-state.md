@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `aab4d63`
-- Commit message: `Tighten release QA and fix logout style warning`
+- Latest implementation commit: `1a720e5`
+- Commit message: `Add final release regression checklist`
 
 ---
 
@@ -53,6 +53,7 @@ The project now has:
 - progression now includes plateau reset and deload-aware rules
 - browser spot-check confirmed new adaptive copy in the programs tab and progression labels in the workout tab
 - release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
+- a final release regression checklist now exists for release-candidate gating
 
 The project is now in:
 - implementation

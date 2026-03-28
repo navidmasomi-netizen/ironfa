@@ -1927,24 +1927,25 @@ function GymApp({ user, onLogout }) {
   const allWorkoutLogs = [...workoutLog, ...workoutHistory];
   const sortedWorkoutLog = [...allWorkoutLogs].sort((a, b) => (Number(b.created_at) || 0) - (Number(a.created_at) || 0));
   const sortedWorkoutHistory = [...workoutHistory].sort((a, b) => (Number(b.created_at) || 0) - (Number(a.created_at) || 0));
+  const progressLogs = sortedWorkoutHistory;
   const sessionKeyOf = (log) => log.created_at ? new Date(log.created_at).toDateString() : `${log.date}-${log.program_name || "free"}`;
-  const uniqueSessionKeys = [...new Set(sortedWorkoutLog.map(sessionKeyOf))];
+  const uniqueSessionKeys = [...new Set(progressLogs.map(sessionKeyOf))];
   const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
   const weeklySessionKeys = [
     ...new Set(
-      sortedWorkoutLog
+      progressLogs
         .filter(log => log.created_at ? Number(log.created_at) >= sevenDaysAgo : true)
         .map(sessionKeyOf)
     )
   ];
-  const totalLoggedVolume = sortedWorkoutLog.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0);
-  const uniqueLoggedExercises = new Set(sortedWorkoutLog.map(log => log.name)).size;
-  const latestSessionKey = sortedWorkoutLog[0] ? sessionKeyOf(sortedWorkoutLog[0]) : null;
-  const latestSessionEntries = latestSessionKey ? sortedWorkoutLog.filter(log => sessionKeyOf(log) === latestSessionKey) : [];
+  const totalLoggedVolume = progressLogs.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0);
+  const uniqueLoggedExercises = new Set(progressLogs.map(log => log.name)).size;
+  const latestSessionKey = progressLogs[0] ? sessionKeyOf(progressLogs[0]) : null;
+  const latestSessionEntries = latestSessionKey ? progressLogs.filter(log => sessionKeyOf(log) === latestSessionKey) : [];
   const latestSessionVolume = latestSessionEntries.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0);
   const latestSessionExercises = new Set(latestSessionEntries.map(log => log.name)).size;
   const sessionAdherenceMap = uniqueSessionKeys.reduce((acc, sessionKey) => {
-    const sessionEntries = sortedWorkoutLog.filter(log => sessionKeyOf(log) === sessionKey);
+    const sessionEntries = progressLogs.filter(log => sessionKeyOf(log) === sessionKey);
     const prescriptionTargets = sessionEntries
       .filter(log => log.prescribed_sets)
       .reduce((map, log) => {

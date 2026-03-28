@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `82723bd`
-- Commit message: `Tighten canonical user normalization`
+- Latest implementation commit: `9464a39`
+- Commit message: `Remove remaining active compatibility aliases`
 
 ---
 
@@ -58,6 +58,7 @@ The project now has:
 - the progress tab now also interprets those trends differently for hypertrophy, strength, fat loss, and recomposition
 - the AI tab now switches into more conservative safety modes when the user profile or question suggests pain, injury, or limitations
 - canonical user normalization now keeps persisted legacy reads at the boundary while returning a cleaner runtime user shape
+- active runtime paths no longer rely on leftover `level` / `gender` / `workoutDays` / `sessionLength` / `program.level` style aliases
 - release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
 - a final release regression checklist now exists for release-candidate gating
 
@@ -610,6 +611,7 @@ Stable enough:
 - goal-specific progress interpretation inside the progress tab
 - limitation-aware AI safety shaping in both prompt construction and visible UI state
 - tighter canonical normalization for persisted user data
+- compatibility debt now mostly reduced to legacy read support at the persistence boundary only
 - normalized runtime user approach
 - trust/disclaimer baseline
 
@@ -645,7 +647,7 @@ The most logical next work items are:
 2. keep hardening the current loop with runtime verification
 3. connect explainability more directly to long-cycle auto-adjustments over time
 4. strengthen release-candidate regression confidence
-5. continue trimming compatibility debt only where it still matters at runtime
+5. keep compatibility cleanup limited to safe persistence-boundary migration work
 
 ---
 

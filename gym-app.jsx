@@ -980,6 +980,41 @@ function getCompletionGuidance({ adherence, currentProgramDay, nextDay, remainin
   };
 }
 
+function getProgressionExplanation(progression) {
+  if (!progression) return null;
+
+  if (progression.strategy === "consolidate") {
+    return "دلیل این تصمیم: پایبندی چند جلسه اخیر پایین بوده و app فعلاً به‌جای افزایش، تثبیت اجرای نسخه را امن‌تر می‌داند.";
+  }
+  if (progression.strategy === "hold") {
+    return "دلیل این تصمیم: عملکرد حرکت در چند ثبت اخیر جلو نرفته، پس app یک جلسه تثبیت با همین بار را ترجیح می‌دهد.";
+  }
+  if (progression.strategy === "increase_load") {
+    return "دلیل این تصمیم: ثبت‌های اخیر به سقف بازه هدف رسیده‌اند، پس افزایش وزنه منطقی‌تر از افزایش تکرار است.";
+  }
+  if (progression.strategy === "increase_reps") {
+    return "دلیل این تصمیم: هنوز جا برای پر کردن بازه تکرار وجود دارد، پس app قبل از افزایش وزنه، تکرار را بالا می‌برد.";
+  }
+  if (progression.strategy === "extend_time") {
+    return "دلیل این تصمیم: این حرکت بیشتر با زمان/تداوم بهتر می‌شود تا افزایش مستقیم بار.";
+  }
+  return "این پیشنهاد از روی ثبت‌های اخیر و prescription فعلی ساخته شده است.";
+}
+
+function getCompletionGuidanceExplanation(result) {
+  if (!result) return null;
+  if (result.guidance_tone === "recovery") {
+    return "این جمع‌بندی نشان می‌دهد هنوز بخشی از نسخه روز فعال ثبت نشده و app فعلاً تکمیل همین روز را اولویت می‌دهد.";
+  }
+  if (result.guidance_tone === "steady") {
+    return "این جمع‌بندی یعنی بخش اصلی جلسه انجام شده، اما هنوز کیفیت اجرا به نقطه‌ای نرسیده که افزایش فشار کاملاً مطمئن باشد.";
+  }
+  if (result.guidance_tone === "strong") {
+    return "این جمع‌بندی یعنی نسخه روز فعال با کیفیت خوبی اجرا شده و app آمادگی بیشتری برای رفتن به روز بعد یا progression می‌بیند.";
+  }
+  return "این جمع‌بندی از پایبندی نسخه، پوشش روز فعال و context برنامه ساخته شده است.";
+}
+
 function buildPlanExplanation(user, recommendedProgram) {
   const normalizedUser = normalizePersistedUser(user);
   const split = recommendedProgram?.split || {};
@@ -1452,6 +1487,7 @@ function checkNewBadges(gameData) {
 function WorkoutCompletePopup({ result, onClose, dark }) {
   const [animStep, setAnimStep] = useState(0);
   const accent = "#e8ff00";
+  const completionExplanation = getCompletionGuidanceExplanation(result);
 
   useEffect(() => {
     const t1 = setTimeout(() => setAnimStep(1), 100);
@@ -1668,6 +1704,11 @@ function WorkoutCompletePopup({ result, onClose, dark }) {
               {result.guidance_title || "قدم بعدی"}
             </div>
             <div style={{ fontWeight: 700, fontSize: 13, color: dark ? "#f0f0f0" : "#111" }}>{result.next_step}</div>
+            {completionExplanation && (
+              <div style={{ fontSize: 12, color: dark ? "#9aa3ad" : "#4f5a66", marginTop: 8, lineHeight: 1.8 }}>
+                {completionExplanation}
+              </div>
+            )}
           </div>
         )}
 
@@ -2568,6 +2609,9 @@ function GymApp({ user, onLogout }) {
                     {typeof activeExerciseProgression.average_reps === "number" && (
                       <span style={s.tag("#444")}>میانگین تکرار اخیر: {activeExerciseProgression.average_reps}</span>
                     )}
+                  </div>
+                  <div style={{ color: dark ? "#beb4d8" : "#5f4f83", fontSize: 12, lineHeight: 1.8, marginBottom: 8 }}>
+                    {getProgressionExplanation(activeExerciseProgression)}
                   </div>
                   <button
                     style={{ ...s.btn("#6d4cc2"), color: "#fff", padding: "6px 10px", fontSize: 12 }}

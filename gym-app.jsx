@@ -814,6 +814,27 @@ function parseRepRange(repRange) {
   return { min: Number(match[1]), max: Number(match[2]) };
 }
 
+function formatRepRange(min, max, fallback = "8-12") {
+  if (!min || !max || min > max) return fallback;
+  return `${min}-${max}`;
+}
+
+function parseRestRange(restRange) {
+  if (!restRange) return { min: null, max: null };
+  const matches = String(restRange).match(/\d+/g);
+  if (!matches?.length) return { min: null, max: null };
+  if (matches.length === 1) {
+    const value = Number(matches[0]);
+    return { min: value, max: value };
+  }
+  return { min: Number(matches[0]), max: Number(matches[1]) };
+}
+
+function formatRestRange(min, max, fallback = "60-90 ثانیه") {
+  if (!min || !max || min > max) return fallback;
+  return `${min}-${max} ثانیه`;
+}
+
 function getProgressionTrend(logs = []) {
   if (!logs.length) {
     return {
@@ -1156,6 +1177,8 @@ function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = []
   if (!exercise || !prescription || !logs.length) {
     return {
       sets: prescription?.sets || 0,
+      rep_range: prescription?.rep_range || "8-12",
+      rest_range: prescription?.rest_range || "60-90 ثانیه",
       effort: prescription?.effort || "2 RIR",
       progression_state: "baseline",
       adjustment_note: null,
@@ -1167,19 +1190,35 @@ function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = []
   const isIsolation = exercise.complexity === "isolation";
   const minSets = isIsolation ? 2 : 3;
   let sets = Number(prescription.sets) || minSets;
+  let rep_range = prescription.rep_range;
+  let rest_range = prescription.rest_range;
   let effort = prescription.effort;
   let progression_state = "baseline";
   let adjustment_note = null;
+  const repRange = parseRepRange(prescription.rep_range);
+  const restRange = parseRestRange(prescription.rest_range);
 
   if (trend.needsConsolidation) {
     sets = Math.max(minSets, sets - 1);
+    if (repRange.min && repRange.max && repRange.max - repRange.min >= 2) {
+      rep_range = formatRepRange(repRange.min, repRange.max - 1, prescription.rep_range);
+    }
+    if (restRange.min && restRange.max) {
+      rest_range = formatRestRange(restRange.min + 15, restRange.max + 15, prescription.rest_range);
+    }
     effort = "3-4 RIR";
     progression_state = "consolidate";
-    adjustment_note = "به‌خاطر پایبندی پایین در چند جلسه اخیر، حجم این حرکت کمی محافظه‌کارانه‌تر نگه داشته شده.";
+    adjustment_note = "به‌خاطر پایبندی پایین در چند جلسه اخیر، حجم و فشار این حرکت کمی محافظه‌کارانه‌تر شده تا اول اجرای تمیز تثبیت شود.";
   } else if (trend.stalled) {
+    if (repRange.min && repRange.max && repRange.max - repRange.min >= 2 && !isIsolation) {
+      rep_range = formatRepRange(repRange.min, repRange.max - 1, prescription.rep_range);
+    }
+    if (restRange.min && restRange.max && !isIsolation) {
+      rest_range = formatRestRange(restRange.min + 15, restRange.max + 30, prescription.rest_range);
+    }
     effort = "2-3 RIR";
     progression_state = "hold";
-    adjustment_note = "به‌خاطر ایست نسبی در ثبت‌های اخیر، فشار این حرکت فعلاً تثبیت شده تا اجرای آن تمیزتر شود.";
+    adjustment_note = "به‌خاطر ایست نسبی در ثبت‌های اخیر، فشار این حرکت فعلاً تثبیت شده و کمی فضای ریکاوری بیشتری گرفته تا اجرای آن تمیزتر شود.";
   } else if (
     trend.trendLabel === "advancing" &&
     trend.averageAdherence !== null &&
@@ -1189,12 +1228,17 @@ function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = []
     sets < 5
   ) {
     sets += 1;
+    if (repRange.min && repRange.max && normalizeSplitGoal(normalizedUser.goal) !== "strength" && repRange.max < 20) {
+      rep_range = formatRepRange(repRange.min + 1, repRange.max + 1, prescription.rep_range);
+    }
     progression_state = "progress";
-    adjustment_note = "به‌خاطر ثبت‌های پایدار اخیر و ریکاوری خوب، این حرکت کمی حجم بیشتری گرفته است.";
+    adjustment_note = "به‌خاطر ثبت‌های پایدار اخیر و ریکاوری خوب، این حرکت کمی حجم بیشتری گرفته و بازه اجرای آن هم کمی جلوتر رفته است.";
   }
 
   return {
     sets,
+    rep_range,
+    rest_range,
     effort,
     progression_state,
     adjustment_note,
@@ -1221,8 +1265,8 @@ function buildExercisePrescription(exerciseName, user, goalOverride, frequencyOv
   return {
     name: exerciseName,
     sets: adjustment.sets,
-    rep_range: basePrescription.rep_range,
-    rest_range: basePrescription.rest_range,
+    rep_range: adjustment.rep_range,
+    rest_range: adjustment.rest_range,
     effort: adjustment.effort,
     programming_focus: PROGRAMMING_STYLE_LABELS[goal] || "پیشروی پایه",
     progression_state: adjustment.progression_state,

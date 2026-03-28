@@ -838,6 +838,46 @@ function getSuggestedRestSeconds(restRange) {
   return match ? Number(match[1]) : 90;
 }
 
+function getCompletionGuidance({ adherence, currentProgramDay, nextDay, remainingExercises = [] }) {
+  if (typeof adherence === "number") {
+    if (adherence < 0.5) {
+      return {
+        title: "جلسه را سبک بستی",
+        tone: "recovery",
+        message: remainingExercises.length
+          ? `نسخه امروز کامل نشد. جلسه بعد از ${remainingExercises[0]} شروع کن و قبل از رفتن به روز بعد، ${remainingExercises.length} حرکت باقی‌مانده را جمع کن.`
+          : "نسخه امروز کامل نشد. جلسه بعد چند ست اول را محافظه‌کارانه شروع کن و به نسخه نزدیک‌تر شو.",
+      };
+    }
+    if (adherence < 0.85) {
+      return {
+        title: "پیشروی خوب، اما هنوز جا دارد",
+        tone: "steady",
+        message: nextDay
+          ? `بخش اصلی روز فعال انجام شد. اگر ریکاوری‌ات خوب بود جلسه بعد به ${nextDay.day} برو، وگرنه همین روز را یک‌بار تمیزتر کامل کن.`
+          : "بخش اصلی روز فعال انجام شد. جلسه بعد همین ساختار را با پایبندی بالاتر تکرار کن.",
+      };
+    }
+    return {
+      title: "نسخه امروز خوب اجرا شد",
+      tone: "strong",
+      message: nextDay
+        ? `پایبندی خوب بود. جلسه بعد سراغ ${nextDay.day} برو و اگر فرم خوب ماند، progression پیشنهادی را هم اعمال کن.`
+        : "پایبندی خوب بود. جلسه بعد می‌توانی progression پیشنهادی را برای حرکات اصلی دنبال کنی.",
+    };
+  }
+
+  return {
+    title: "جلسه ثبت شد",
+    tone: "neutral",
+    message: nextDay
+      ? `جلسه بعد با ${nextDay.day} ادامه بده.`
+      : currentProgramDay
+        ? "اگر هنوز انرژی داری، همین روز را کامل‌تر کن یا جلسه را در progress مرور کن."
+        : "حالا می‌توانی برنامه پیشنهادی را انتخاب کنی یا وارد تب پیشرفت شوی.",
+  };
+}
+
 function getPrescriptionRepRange(exercise, goal) {
   if (!exercise) return "8-12";
   if (goal === "hypertrophy") {
@@ -1282,6 +1322,29 @@ function WorkoutCompletePopup({ result, onClose, dark }) {
   const prescriptionAdherence = typeof result.prescription_adherence === "number"
     ? Math.round(result.prescription_adherence * 100)
     : null;
+  const guidanceToneStyles = {
+    recovery: {
+      background: dark ? "#1d1400" : "#fff6df",
+      border: "1px solid #b88400",
+      label: dark ? "#ffd36a" : "#9a6500",
+    },
+    steady: {
+      background: dark ? "#111a24" : "#eef7ff",
+      border: "1px solid #2f6ea5",
+      label: dark ? "#8fbbe8" : "#2f6ea5",
+    },
+    strong: {
+      background: dark ? "#101600" : "#f4ffe7",
+      border: `1px solid ${accent}66`,
+      label: dark ? "#d7ff76" : "#708900",
+    },
+    neutral: {
+      background: dark ? "#171717" : "#f5f5f5",
+      border: `1px solid ${dark ? "#2a2a2a" : "#ddd"}`,
+      label: dark ? "#bbb" : "#555",
+    },
+  };
+  const guidanceTone = guidanceToneStyles[result.guidance_tone || "neutral"] || guidanceToneStyles.neutral;
 
   return (
     <div style={{
@@ -1446,14 +1509,16 @@ function WorkoutCompletePopup({ result, onClose, dark }) {
 
         {result.next_step && (
           <div style={{
-            background: dark ? "#111a24" : "#eef7ff",
-            border: "1px solid #2f6ea5",
+            background: guidanceTone.background,
+            border: guidanceTone.border,
             borderRadius: 14, padding: "12px 16px", marginBottom: 14,
             opacity: animStep >= 3 ? 1 : 0,
             transform: animStep >= 3 ? "translateY(0)" : "translateY(10px)",
             transition: "all 0.4s ease 0.45s"
           }}>
-            <div style={{ fontSize: 12, color: dark ? "#8fbbe8" : "#2f6ea5", marginBottom: 4 }}>قدم بعدی</div>
+            <div style={{ fontSize: 12, color: guidanceTone.label, marginBottom: 4 }}>
+              {result.guidance_title || "قدم بعدی"}
+            </div>
             <div style={{ fontWeight: 700, fontSize: 13, color: dark ? "#f0f0f0" : "#111" }}>{result.next_step}</div>
           </div>
         )}
@@ -1876,6 +1941,9 @@ function GymApp({ user, onLogout }) {
     const prescriptionSummary = totalPrescriptionUnits
       ? `${completedPrescriptionUnits} از ${totalPrescriptionUnits} ست هدف`
       : null;
+    const remainingExercises = currentProgramDay
+      ? currentProgramDay.exercises.filter(exerciseName => !dayLogs.some(log => log.name === exerciseName))
+      : [];
     const newStreak = updateStreak(gameData);
     const xpEarned = calcXPForWorkout(workoutLog.length);
     const newXP = gameData.xp + xpEarned;
@@ -1900,6 +1968,12 @@ function GymApp({ user, onLogout }) {
     const newBadges = checkNewBadges({ ...gameData, xp: newXP, level: newLevelInfo.level, streak: newStreak, totalWorkouts: newTotalWorkouts, totalSets: newTotalSets });
     const nextDayIndex = selectedProgram?.days?.length ? (selectedProgramDay + 1) % selectedProgram.days.length : null;
     const nextDay = nextDayIndex !== null ? selectedProgram.days[nextDayIndex] : null;
+    const completionGuidance = getCompletionGuidance({
+      adherence: prescriptionAdherence,
+      currentProgramDay,
+      nextDay,
+      remainingExercises,
+    });
 
     saveGameData(user.id, updatedGame);
     setGameData(updatedGame);
@@ -1920,11 +1994,9 @@ function GymApp({ user, onLogout }) {
       program_name: currentWorkoutContext?.program_name || null,
       day_name: currentWorkoutContext?.day_name || null,
       next_day_name: nextDay?.day || null,
-      next_step: nextDay
-        ? `برای جلسه بعدی سراغ ${nextDay.day} برو و با ${nextDay.exercises?.[0] || "اولین حرکت روز"} شروع کن.`
-        : currentProgramDay
-          ? "اگر هنوز انرژی داری، همین روز را کامل‌تر کن یا جلسه را در progress مرور کن."
-          : "حالا می‌توانی برنامه پیشنهادی را انتخاب کنی یا وارد تب پیشرفت شوی.",
+      guidance_title: completionGuidance.title,
+      guidance_tone: completionGuidance.tone,
+      next_step: completionGuidance.message,
     });
     setWorkoutLog([]);
     if (selectedProgram && nextDay) {

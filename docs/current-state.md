@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `213c852`
-- Commit message: `Reset stale workout form on selection fallback`
+- Latest implementation commit: `9119959`
+- Commit message: `Add local runtime verification harness`
 
 ---
 
@@ -43,6 +43,7 @@ The project now has:
 - switching programs or days now resets the active workout form so stale values do not leak into a new context
 - progress tab stats now read only completed workout history, not the active workout draft
 - invalid restored or stale exercise selections now reset the active workout form instead of carrying old values
+- a local Vite runtime harness now exists for real browser verification
 
 The project is now in:
 - implementation
@@ -337,6 +338,15 @@ Implemented:
 - last-session prescription adherence
 - progress metrics now ignore unfinished workout drafts
 
+### S. Runtime Verification Tooling
+The repo can now be run locally for real browser verification.
+
+Implemented:
+- local `package.json` with Vite scripts
+- `index.html` mount file
+- `main.jsx` React entry file
+- successful local production build via Vite
+
 ### N. AI Prompt Sync
 The AI prompt is now aligned with the newer user model.
 
@@ -410,6 +420,14 @@ Remaining compatibility debt is now mostly intentional and limited to:
 - legacy aliases preserved in `normalizePersistedUser(...)`
 - legacy aliases still present in some exercise objects
 - compatibility fields preserved where needed to avoid breaking older persisted state
+
+### Runtime Verification Path
+A real local verification path now exists.
+
+Implemented:
+- local installable runtime dependencies
+- buildable runtime harness inside the repo
+- browser-openable local app URL for manual checklist execution
 
 ---
 

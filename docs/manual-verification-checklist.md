@@ -191,3 +191,20 @@ Use this section to record issues found during the pass:
 
 - [ ] No issues found
 - [ ] Issues recorded separately
+
+### Code-Level Findings Closed So Far
+
+- [x] Adaptive plans now read only completed workout history, not the active workout draft.
+- [x] Switching programs clears the active workout draft instead of mixing sessions across plans.
+- [x] Progress weight entry now blocks non-positive and non-numeric values.
+- [x] Switching programs or days now resets stale weight/reps/sets in the active workout form.
+- [x] Progress tab session stats now use completed workout history only.
+- [x] Invalid or stale restored exercise selections now reset the active workout form instead of carrying old values.
+
+### Runtime Checks Still To Execute
+
+- [ ] Real browser/runtime pass from onboarding into recommendation.
+- [ ] Real workout logging and completion pass with UI interaction.
+- [ ] Refresh/reload persistence pass during an active workout.
+- [ ] Post-completion restore pass with history/progress inspection.
+- [ ] AI tab runtime prompt/context sanity check.

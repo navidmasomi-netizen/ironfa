@@ -118,9 +118,19 @@ function normalizePersistedUser(user) {
   };
 }
 
+function getDisplayGoal(goal) {
+  const normalizedGoal = normalizeSplitGoal(goal);
+  return GOAL_LABELS[normalizedGoal] || goal || "نامشخص";
+}
+
+function getDisplayTrainingLevel(level) {
+  const normalizedLevel = normalizeSplitLevel(level);
+  return LEVEL_LABELS[normalizedLevel] || level || "نامشخص";
+}
+
 const DEMO_USER = {
   id: 0, name: "کاربر دمو", email: "test@ironfa.com", password: "ironfa123",
-  goal: "حجم عضلانی", goal_label: "حجم عضلانی", training_level: "متوسط", age: 25, height: 178, weight: 80, sex: "مرد",
+  goal: "حجم عضلانی", training_level: "متوسط", age: 25, height: 178, weight: 80, sex: "مرد",
   training_days_per_week: 4, session_duration: 60, equipment_access: "باشگاه کامل", injury_or_limitation_flags: ["ندارم"],
   recovery_quality: "بالا",
   onboarded: true
@@ -319,7 +329,6 @@ function Onboarding({ baseUser, onFinish }) {
     const updated = normalizePersistedUser({
       ...baseUser,
       ...cleanedOnboardingData,
-      goal_label: data.goal,
       onboarded: true,
     });
     const users = getUsers();
@@ -519,7 +528,6 @@ function AuthScreen({ onLogin }) {
       email: form.email,
       password: form.password,
       goal: "حجم عضلانی",
-      goal_label: "حجم عضلانی",
       training_level: "مبتدی",
       onboarded: false,
     });
@@ -1040,7 +1048,7 @@ function buildPlanExplanation(user, recommendedProgram) {
   const adjustments = [];
   const nextChecks = [];
 
-  reasons.push(`هدف فعلی تو ${normalizedUser.goal_label || normalizedUser.goal || "نامشخص"} است، بنابراین منطق برنامه روی ${recommendedProgram.programming_style || "پیشروی پایه"} تنظیم شده.`);
+  reasons.push(`هدف فعلی تو ${getDisplayGoal(normalizedUser.goal)} است، بنابراین منطق برنامه روی ${recommendedProgram.programming_style || "پیشروی پایه"} تنظیم شده.`);
   reasons.push(`${normalizedUser.training_days_per_week || "؟"} جلسه در هفته باعث شده split ${SPLIT_LABELS[split.split_family] || split.split_family || "فعلی"} انتخاب شود.`);
 
   if (normalizedUser.session_duration <= 45) {
@@ -1403,7 +1411,9 @@ function buildRecommendedProgram(user, logs = []) {
     id: "recommended",
     isRecommended: true,
     name: `پیشنهاد هوشمند — ${SPLIT_LABELS[split.split_family]} ${split.frequency} روزه`,
+    training_level: normalizeSplitLevel(normalizedUser.training_level),
     level: levelLabel,
+    goal_key: split.goal,
     goal: goalLabel,
     programming_style: PROGRAMMING_STYLE_LABELS[split.goal] || "پیشروی پایه",
     programming_cue: PROGRAMMING_CUE_LABELS[split.goal] || "",
@@ -1435,6 +1445,7 @@ function buildStaticProgram(program, user, logs = []) {
 
   return {
     ...program,
+    goal_key: goalKey,
     level: LEVEL_LABELS[program.training_level] || program.level,
     goal: GOAL_LABELS[goalKey] || program.goal,
     programming_style: PROGRAMMING_STYLE_LABELS[goalKey] || "پیشروی پایه",
@@ -2067,8 +2078,8 @@ function GymApp({ user, onLogout }) {
     is_recommended: !!selectedProgram.isRecommended,
   } : null;
   const planSummaryItems = [
-    { label: "هدف", value: runtimeUser.goal_label || runtimeUser.goal || "نامشخص" },
-    { label: "سطح", value: runtimeUser.training_level || "نامشخص" },
+    { label: "هدف", value: getDisplayGoal(runtimeUser.goal) },
+    { label: "سطح", value: getDisplayTrainingLevel(runtimeUser.training_level) },
     { label: "تعداد جلسات", value: `${runtimeUser.training_days_per_week || "؟"} روز در هفته` },
     { label: "مدت هر جلسه", value: `${runtimeUser.session_duration || "؟"} دقیقه` },
     { label: "split انتخاب‌شده", value: SPLIT_LABELS[recommendedProgram.split.split_family] || recommendedProgram.split.split_family },
@@ -2080,8 +2091,8 @@ function GymApp({ user, onLogout }) {
   const planDisclaimerCopy = "اگر محدودیت یا درد واقعی داری، برنامه را محافظه‌کارانه اجرا کن و حرکات دردزا را حذف یا جایگزین کن.";
   const planExplanation = buildPlanExplanation(runtimeUser, recommendedProgram);
   const aiContextSummaryItems = [
-    { label: "هدف", value: userProfile.goal || "نامشخص" },
-    { label: "سطح", value: userProfile.level || "نامشخص" },
+    { label: "هدف", value: getDisplayGoal(userProfile.goal) },
+    { label: "سطح", value: getDisplayTrainingLevel(userProfile.level) },
     { label: "برنامه فعال", value: currentWorkoutContext?.program_name || "ندارد" },
     { label: "روز فعال", value: currentWorkoutContext?.day_name || "ندارد" },
     { label: "split", value: currentWorkoutContext?.split_family || recommendedProgram.split.split_family || "نامشخص" },
@@ -2869,8 +2880,8 @@ function GymApp({ user, onLogout }) {
                     {recommendedProgram.programming_cue ? ` · ${recommendedProgram.programming_cue}` : ""}
                   </div>
                   <div style={s.row}>
-                    <span style={s.tag("#0a8a2e")}>{recommendedProgram.level}</span>
-                    <span style={s.tag("#5a2de8")}>{recommendedProgram.goal}</span>
+                    <span style={s.tag("#0a8a2e")}>{getDisplayTrainingLevel(recommendedProgram.training_level)}</span>
+                    <span style={s.tag("#5a2de8")}>{getDisplayGoal(recommendedProgram.goal_key || recommendedProgram.goal)}</span>
                     <span style={s.tag("#b38b00")}>{SPLIT_LABELS[recommendedProgram.split.split_family]}</span>
                   </div>
                 </div>
@@ -2941,10 +2952,10 @@ function GymApp({ user, onLogout }) {
                       {prog.programming_cue ? ` · ${prog.programming_cue}` : ""}
                     </div>
                     <div style={s.row}>
-                      <span style={s.tag((LEVEL_LABELS[prog.training_level] || prog.level) === "مبتدی" ? "#0a8a2e" : (LEVEL_LABELS[prog.training_level] || prog.level) === "متوسط" ? "#e87e0a" : "#8a0a0a")}>
-                        {LEVEL_LABELS[prog.training_level] || prog.level}
+                      <span style={s.tag(getDisplayTrainingLevel(prog.training_level) === "مبتدی" ? "#0a8a2e" : getDisplayTrainingLevel(prog.training_level) === "متوسط" ? "#e87e0a" : "#8a0a0a")}>
+                        {getDisplayTrainingLevel(prog.training_level)}
                       </span>
-                      <span style={s.tag("#5a2de8")}>{GOAL_LABELS[prog.goal_key] || prog.goal}</span>
+                      <span style={s.tag("#5a2de8")}>{getDisplayGoal(prog.goal_key || prog.goal)}</span>
                       {prog.split?.split_family && <span style={s.tag("#b38b00")}>{SPLIT_LABELS[prog.split.split_family] || prog.split.split_family}</span>}
                     </div>
                   </div>

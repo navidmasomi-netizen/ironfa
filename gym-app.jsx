@@ -2079,6 +2079,14 @@ function GymApp({ user, onLogout }) {
   const planTrustCopy = "این خلاصه از روی هدف، سطح، تعداد جلسات، ریکاوری، تجهیزات و محدودیت‌های تو ساخته شده و برنامه پیشنهادی پایین بر همان اساس انتخاب شده است.";
   const planDisclaimerCopy = "اگر محدودیت یا درد واقعی داری، برنامه را محافظه‌کارانه اجرا کن و حرکات دردزا را حذف یا جایگزین کن.";
   const planExplanation = buildPlanExplanation(runtimeUser, recommendedProgram);
+  const aiContextSummaryItems = [
+    { label: "هدف", value: userProfile.goal || "نامشخص" },
+    { label: "سطح", value: userProfile.level || "نامشخص" },
+    { label: "برنامه فعال", value: currentWorkoutContext?.program_name || "ندارد" },
+    { label: "روز فعال", value: currentWorkoutContext?.day_name || "ندارد" },
+    { label: "split", value: currentWorkoutContext?.split_family || recommendedProgram.split.split_family || "نامشخص" },
+    { label: "محدودیت‌ها", value: (userProfile.injury_or_limitation_flags || []).join("، ") || "ندارد" },
+  ];
   const activateProgram = (program) => {
     setWorkoutLog([]);
     clearPerUserData(ACTIVE_WORKOUT_KEY, user.id);
@@ -3181,6 +3189,23 @@ function GymApp({ user, onLogout }) {
                 <div style={{ fontWeight: 700, color: text, marginBottom: 4 }}>مرز مربی AI</div>
                 <div>پاسخ‌های این بخش برای راهنمایی عمومی تمرینی هستند و جای پزشک، فیزیوتراپیست یا مربی حضوری را نمی‌گیرند.</div>
                 <div style={{ marginTop: 4 }}>{DISCLAIMER_BASELINE_COPY}</div>
+              </div>
+              <div style={{
+                background: dark ? "#101625" : "#eef4ff",
+                border: `1px solid ${dark ? "#2f4069" : "#c3d4f5"}`,
+                borderRadius: 12,
+                padding: "10px 12px",
+                marginBottom: 12
+              }}>
+                <div style={{ fontWeight: 700, color: text, marginBottom: 8 }}>کانتکست فعلی که به مربی AI داده می‌شود</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {aiContextSummaryItems.map((item) => (
+                    <div key={item.label} style={{ background: dark ? "#171d31" : "#fff", borderRadius: 10, padding: "8px 10px" }}>
+                      <div style={{ fontSize: 11, color: sub, marginBottom: 4 }}>{item.label}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: text }}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
                 {["برنامه هفته آینده؟", "برای حجم چی بخورم؟", "چطور زانو درد ندم؟", "بهترین حرکت سرشانه؟"].map(q => (

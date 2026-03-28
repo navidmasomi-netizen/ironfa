@@ -945,6 +945,13 @@ function getLongTermProgressionCycle(logs = []) {
   };
 }
 
+function getTrendDirection(currentValue, previousValue, epsilon = 0.01) {
+  if (typeof currentValue !== "number" || typeof previousValue !== "number") return "neutral";
+  if (currentValue > previousValue + epsilon) return "up";
+  if (currentValue < previousValue - epsilon) return "down";
+  return "flat";
+}
+
 function getProgressionSuggestion(exercise, prescription, logs = []) {
   if (!exercise || !prescription) return null;
   const { min, max } = parseRepRange(prescription.rep_range);
@@ -2324,6 +2331,52 @@ function GymApp({ user, onLogout }) {
   const latestSessionAdherence = latestSessionKey && typeof sessionAdherenceMap[latestSessionKey] === "number"
     ? Math.round(sessionAdherenceMap[latestSessionKey] * 100)
     : null;
+  const recentSessionKeys = uniqueSessionKeys.slice(0, 3);
+  const previousSessionKeys = uniqueSessionKeys.slice(3, 6);
+  const recentSessionEntries = progressLogs.filter(log => recentSessionKeys.includes(sessionKeyOf(log)));
+  const previousSessionEntries = progressLogs.filter(log => previousSessionKeys.includes(sessionKeyOf(log)));
+  const recentAdherenceValues = recentSessionKeys
+    .map(key => sessionAdherenceMap[key])
+    .filter(value => typeof value === "number");
+  const previousAdherenceValues = previousSessionKeys
+    .map(key => sessionAdherenceMap[key])
+    .filter(value => typeof value === "number");
+  const recentAverageAdherence = recentAdherenceValues.length
+    ? Math.round((recentAdherenceValues.reduce((sum, value) => sum + value, 0) / recentAdherenceValues.length) * 100)
+    : null;
+  const previousAverageAdherence = previousAdherenceValues.length
+    ? Math.round((previousAdherenceValues.reduce((sum, value) => sum + value, 0) / previousAdherenceValues.length) * 100)
+    : null;
+  const adherenceTrendDirection = getTrendDirection(recentAverageAdherence, previousAverageAdherence, 1);
+  const recentAverageVolume = recentSessionKeys.length
+    ? Math.round(recentSessionEntries.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0) / recentSessionKeys.length)
+    : 0;
+  const previousAverageVolume = previousSessionKeys.length
+    ? Math.round(previousSessionEntries.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0) / previousSessionKeys.length)
+    : 0;
+  const volumeTrendDirection = getTrendDirection(recentAverageVolume, previousAverageVolume, 25);
+  const sessionCadenceLabel = weeklySessionKeys.length >= 4
+    ? "ریتم تمرینت خوب و پایدار است"
+    : weeklySessionKeys.length >= 2
+      ? "ریتم تمرینت متوسط است"
+      : uniqueSessionKeys.length > 0
+        ? "ریتم تمرینت هنوز ناپایدار است"
+        : "هنوز session کافی برای تحلیل ریتم نداری";
+  const sessionCadenceColor = weeklySessionKeys.length >= 4 ? "#0a8a2e" : weeklySessionKeys.length >= 2 ? "#b88400" : "#8a450a";
+  const consistencySummary = adherenceTrendDirection === "up"
+    ? "پایبندی نسخه در چند جلسه اخیر بهتر شده"
+    : adherenceTrendDirection === "down"
+      ? "پایبندی نسخه در چند جلسه اخیر افت کرده"
+      : recentAverageAdherence !== null
+        ? "پایبندی نسخه فعلاً پایدار مانده"
+        : "هنوز داده کافی برای تحلیل پایبندی نداری";
+  const volumeSummary = volumeTrendDirection === "up"
+    ? "میانگین حجم sessionهای اخیر بالاتر رفته"
+    : volumeTrendDirection === "down"
+      ? "میانگین حجم sessionهای اخیر پایین‌تر آمده"
+      : recentAverageVolume > 0
+        ? "میانگین حجم sessionهای اخیر تقریباً ثابت مانده"
+        : "هنوز داده کافی برای تحلیل حجم نداری";
   const currentWeightValue = progressData[progressData.length - 1]?.weight ?? null;
   const startingWeightValue = progressData[0]?.weight ?? null;
   const totalWeightChange = currentWeightValue !== null && startingWeightValue !== null
@@ -3453,6 +3506,55 @@ function GymApp({ user, onLogout }) {
               ) : (
                 <div style={{ color: sub, fontSize: 13 }}>هنوز جلسه‌ای ثبت نشده. اولین تمرین را از تب برنامه یا تمرین شروع کن.</div>
               )}
+            </div>
+
+            <div style={{ ...s.card, background: dark ? "#12131b" : "#faf7ff" }}>
+              <div style={{ fontWeight: 800, marginBottom: 10 }}>تحلیل روند اخیر</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+                {[
+                  {
+                    label: "روند پایبندی",
+                    val: adherenceTrendDirection === "up" ? "رو به بهبود"
+                      : adherenceTrendDirection === "down" ? "رو به افت"
+                      : recentAverageAdherence !== null ? "پایدار" : "نامشخص",
+                    color: adherenceTrendDirection === "up" ? "#0a8a2e" : adherenceTrendDirection === "down" ? "#c43c3c" : "#8a5cff",
+                  },
+                  {
+                    label: "روند حجم",
+                    val: volumeTrendDirection === "up" ? "رو به افزایش"
+                      : volumeTrendDirection === "down" ? "رو به کاهش"
+                      : recentAverageVolume > 0 ? "تقریباً ثابت" : "نامشخص",
+                    color: volumeTrendDirection === "up" ? "#0af" : volumeTrendDirection === "down" ? "#e87e0a" : "#6d4cc2",
+                  },
+                  {
+                    label: "ریتم هفتگی",
+                    val: weeklySessionKeys.length >= 4 ? "پایدار"
+                      : weeklySessionKeys.length >= 2 ? "متوسط"
+                      : uniqueSessionKeys.length > 0 ? "ناپایدار" : "نامشخص",
+                    color: sessionCadenceColor,
+                  },
+                ].map(item => (
+                  <div key={item.label} style={{ background: dark ? "#1a1d26" : "#fff", borderRadius: 10, padding: "12px 10px" }}>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: item.color, marginBottom: 4 }}>{item.val}</div>
+                    <div style={{ fontSize: 12, color: sub }}>{item.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "grid", gap: 8, fontSize: 12, color: sub, lineHeight: 1.9 }}>
+                <div>• {consistencySummary}</div>
+                <div>• {volumeSummary}</div>
+                <div>• {sessionCadenceLabel}</div>
+                {recentAverageAdherence !== null && previousAverageAdherence !== null && (
+                  <div>
+                    • میانگین پایبندی ۳ جلسه اخیر: {recentAverageAdherence}% در برابر {previousAverageAdherence}% در ۳ جلسه قبل
+                  </div>
+                )}
+                {recentAverageVolume > 0 && previousAverageVolume > 0 && (
+                  <div>
+                    • میانگین حجم ۳ جلسه اخیر: {recentAverageVolume} در برابر {previousAverageVolume} در ۳ جلسه قبل
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Chart */}

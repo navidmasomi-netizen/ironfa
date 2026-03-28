@@ -9,11 +9,11 @@ IronFa
 - Current state file: `/Users/user/Desktop/Gym App/docs/current-state.md`
 
 ## Date
-Current working state after moving from specification into real implementation and checkpointing the first major implementation wave.
+Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `db63dbf`
-- Commit message: `Implement programming baselines and workout loop hardening`
+- Latest implementation commit: `72496a8`
+- Commit message: `Add progression-aware workout guidance`
 
 ---
 
@@ -28,6 +28,7 @@ The project now has:
 - a functional MVP training loop with program selection, logging, completion, persistence, and progress
 - early goal-specific programming behavior
 - trust and disclaimer baseline in user-facing surfaces
+- progression-aware workout guidance based on movement history
 
 The project is now in:
 - implementation
@@ -223,6 +224,10 @@ Prescription layer currently generates:
 - effort target
 - programming focus label
 
+It now also supports:
+- history-based progression hints for the active exercise
+- simple next-session weight or rep suggestions
+
 ### H. Workout Flow Backbone
 The workout flow is now program-aware and day-aware.
 
@@ -234,6 +239,8 @@ Implemented:
 - active program display
 - active day context in workout flow
 - active prescription display in workout
+- progression suggestion block for the active exercise
+- one-click autofill for the suggested next-session target
 
 ### I. Logging Interaction Baseline
 Logging is no longer a raw form only.
@@ -346,10 +353,11 @@ These are active enough to be considered real implemented baselines:
 - progress persistence baseline
 - prescription adherence tracking
 - trust/disclaimer baseline
+- progression-aware workout guidance
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:
-- advanced progression logic
+- deeper progression logic beyond the current hint layer
 - deeper volume auto-adjustment
 - full plan explanation layer
 - richer workout-screen prescription UX
@@ -387,6 +395,8 @@ Implemented:
 
 This means programs are no longer only split + exercise names. They now carry baseline training prescriptions.
 
+The workout layer now also uses recent history to suggest the next session target for the active movement.
+
 ---
 
 ## 9. Current Real Product Loop
@@ -404,10 +414,11 @@ The current MVP backbone now looks like this:
 9. user logs sets with program/day context
 10. app shows save feedback
 11. app measures day coverage and prescription adherence
-12. user completes workout
-13. app shows session summary and next-step guidance
-14. progress and logs persist across sessions
-15. progress tab reflects adherence and session-level progress
+12. app suggests the next progression target for the active exercise
+13. user completes workout
+14. app shows session summary and next-step guidance
+15. progress and logs persist across sessions
+16. progress tab reflects adherence and session-level progress
 
 This is the strongest implemented loop so far.
 
@@ -424,6 +435,7 @@ Stable enough:
 - logging with context
 - completion popup summary
 - adherence tracking
+- progression-aware workout guidance
 - persistence for key loop data
 - progress tab baseline
 - normalized runtime user approach
@@ -475,9 +487,9 @@ Recommended next focus:
 - keep working from `/Users/user/Desktop/Gym App/gym-app.jsx`
 
 If continuing from the current momentum, the best next topic is:
-- progression-aware workout behavior
+- progression-aware behavior beyond the current hint layer
 or
-- workout screen polish around prescriptions and adherence
+- workout screen polish around prescriptions, adherence, and progression hints
 
 ---
 
@@ -543,6 +555,7 @@ The project now has:
 - a stronger progress layer
 - early goal-specific programming prescriptions
 - prescription adherence tracking
+- progression-aware workout guidance
 - trust/disclaimer product surfaces
 
 The project should now continue through focused implementation and hardening, not a return to broad planning.

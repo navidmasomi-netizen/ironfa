@@ -51,6 +51,7 @@ The project now has:
 - core exercise objects no longer carry legacy `muscle` / `level` aliases
 - adaptive prescriptions now adjust rep range and rest range, not only sets and effort
 - progression now includes plateau reset and deload-aware rules
+- browser spot-check confirmed new adaptive copy in the programs tab and progression labels in the workout tab
 
 The project is now in:
 - implementation
@@ -451,6 +452,9 @@ Implemented:
   - persistence and restore behavior
   - progress tab
   - AI tab
+- completed spot-check verification for:
+  - adaptive prescription notes in the programs tab
+  - progression labels and explanation copy in the workout tab
 
 ---
 

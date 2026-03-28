@@ -226,3 +226,5 @@ Use this section to record issues found during the pass:
 - [x] Adaptive prescription visibility
 - [x] Progress tab
 - [x] AI tab
+- [x] Spot-check for adaptive prescription copy in the programs tab
+- [x] Spot-check for progression state labels and explanation in the workout tab

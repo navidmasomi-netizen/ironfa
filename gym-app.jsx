@@ -43,6 +43,33 @@ function savePerUserData(key, userId, value) {
   localStorage.setItem(key, JSON.stringify(all));
 }
 
+function sanitizeWorkoutLog(logs) {
+  if (!Array.isArray(logs)) return [];
+  return logs
+    .filter(log => log && typeof log === "object" && log.name)
+    .map(log => ({
+      ...log,
+      name: String(log.name),
+      weight: Number(log.weight) || 0,
+      reps: Number(log.reps) || 0,
+      sets: Math.max(1, Number(log.sets) || 1),
+      created_at: Number(log.created_at) || Date.now(),
+    }))
+    .filter(log => log.reps > 0);
+}
+
+function sanitizeProgressData(entries, fallback = []) {
+  const source = Array.isArray(entries) && entries.length ? entries : fallback;
+  if (!Array.isArray(source)) return [];
+  return source
+    .filter(entry => entry && typeof entry === "object")
+    .map(entry => ({
+      date: entry.date || new Date().toLocaleDateString("fa-IR"),
+      weight: Number(entry.weight) || 0,
+    }))
+    .filter(entry => entry.weight > 0);
+}
+
 function normalizePersistedUser(user) {
   if (!user) return null;
   const trainingLevel = user.training_level || user.level || "مبتدی";
@@ -1712,14 +1739,14 @@ function GymApp({ user, onLogout }) {
   const [searchEx, setSearchEx] = useState("");
   const [filterMuscle, setFilterMuscle] = useState("همه");
   const [selectedEx, setSelectedEx] = useState(null);
-  const [workoutLog, setWorkoutLog] = useState(() => getPerUserData(WORKOUT_LOG_KEY, user.id, []));
+  const [workoutLog, setWorkoutLog] = useState(() => sanitizeWorkoutLog(getPerUserData(WORKOUT_LOG_KEY, user.id, [])));
   const [activeSet, setActiveSet] = useState({ name: "", weight: "", reps: "", sets: "" });
   const [logFeedback, setLogFeedback] = useState(null);
   const [restTimer, setRestTimer] = useState(0);
   const [restRunning, setRestRunning] = useState(false);
   const [restDuration, setRestDuration] = useState(90);
   const timerRef = useRef(null);
-  const [progressData, setProgressData] = useState(() => getPerUserData(PROGRESS_DATA_KEY, user.id, defaultProgressData));
+  const [progressData, setProgressData] = useState(() => sanitizeProgressData(getPerUserData(PROGRESS_DATA_KEY, user.id, defaultProgressData), defaultProgressData));
   const [newWeight, setNewWeight] = useState("");
   const [foodLog, setFoodLog] = useState([]);
   const [aiResult, setAiResult] = useState("");
@@ -1911,12 +1938,27 @@ function GymApp({ user, onLogout }) {
   }, [logFeedback]);
 
   useEffect(() => {
-    savePerUserData(WORKOUT_LOG_KEY, user.id, workoutLog);
+    savePerUserData(WORKOUT_LOG_KEY, user.id, sanitizeWorkoutLog(workoutLog));
   }, [user.id, workoutLog]);
 
   useEffect(() => {
-    savePerUserData(PROGRESS_DATA_KEY, user.id, progressData);
+    savePerUserData(PROGRESS_DATA_KEY, user.id, sanitizeProgressData(progressData, defaultProgressData));
   }, [user.id, progressData]);
+
+  useEffect(() => {
+    if (!selectedProgram?.days?.length) return;
+    if (selectedProgramDay < selectedProgram.days.length) return;
+    setSelectedProgramDay(0);
+  }, [selectedProgram, selectedProgramDay]);
+
+  useEffect(() => {
+    const validExerciseNames = currentProgramDay?.exercises?.length
+      ? currentProgramDay.exercises
+      : userFilteredExercises.map(ex => ex.name);
+    if (!validExerciseNames.length) return;
+    if (activeSet.name && validExerciseNames.includes(activeSet.name)) return;
+    setActiveSet(s => ({ ...s, name: validExerciseNames[0] || "" }));
+  }, [activeSet.name, currentProgramDay, userFilteredExercises]);
 
   useEffect(() => {
     if (selectedProgram) return;
@@ -1947,13 +1989,19 @@ function GymApp({ user, onLogout }) {
   const stopRest = () => { setRestRunning(false); setRestTimer(0); };
 
   const logSet = () => {
-    if (!activeSet.name || !activeSet.weight || !activeSet.reps) return;
+    const parsedWeight = Number(activeSet.weight);
+    const parsedReps = Number(activeSet.reps);
+    const parsedSets = Math.max(1, Number(activeSet.sets) || 1);
+    if (!activeSet.name || parsedWeight <= 0 || parsedReps <= 0) return;
     const prescribed = currentProgramPrescriptions.find(item => item.name === activeSet.name) || null;
     const entry = {
       ...activeSet,
       id: Date.now(),
       created_at: Date.now(),
       date: new Date().toLocaleDateString("fa-IR"),
+      weight: parsedWeight,
+      reps: parsedReps,
+      sets: parsedSets,
       program_name: currentWorkoutContext?.program_name || null,
       day_name: currentWorkoutContext?.day_name || null,
       split_family: currentWorkoutContext?.split_family || null,
@@ -2114,8 +2162,9 @@ function GymApp({ user, onLogout }) {
     setAiLoading(false);
   };
 
-  const maxW = Math.max(...progressData.map(d => d.weight));
-  const minW = Math.min(...progressData.map(d => d.weight));
+  const progressWeights = progressData.map(d => d.weight);
+  const maxW = progressWeights.length ? Math.max(...progressWeights) : 0;
+  const minW = progressWeights.length ? Math.min(...progressWeights) : 0;
   const range = maxW - minW || 1;
 
   const bg = dark ? "#0a0a0a" : "#f5f5f0";

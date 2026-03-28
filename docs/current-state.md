@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `d90c5bf`
-- Commit message: `Explain workout progression and completion feedback`
+- Latest implementation commit: `5c70454`
+- Commit message: `Make prescriptions adapt to session history`
 
 ---
 
@@ -36,6 +36,7 @@ The project now has:
 - separation between active workout draft and persisted workout history
 - a full explanation layer for why the current program was selected and what may change it
 - deeper explainability inside workout progression and completion feedback
+- history-aware prescription adjustments inside recommended and static programs
 
 The project is now in:
 - implementation
@@ -236,6 +237,7 @@ It now also supports:
 - history-based progression hints for the active exercise
 - simple next-session weight or rep suggestions
 - trend-aware suggestions that can hold, consolidate, or progress based on recent sessions
+- history-aware prescription adjustment notes inside the program itself
 
 ### H. Workout Flow Backbone
 The workout flow is now program-aware and day-aware.
@@ -350,6 +352,17 @@ Implemented:
 - clear reasons tied to goal, frequency, recovery, equipment, and limitations
 - explanation of what later changes may hold, consolidate, or progress the plan
 
+### R. History-Aware Prescription Layer
+The plan itself now adapts to recent session history.
+
+Implemented:
+- history-aware prescription adjustments for recommended programs
+- history-aware prescription adjustments for static programs
+- conservative volume reduction when adherence is low
+- hold behavior when recent exercise performance stalls
+- slight prescription progression when history is stable and recovery is good
+- adjustment notes shown directly inside the relevant prescription cards
+
 ### Q. Workout Explainability Layer
 The workout loop now explains decision-making, not just outcomes.
 
@@ -411,6 +424,7 @@ These are active enough to be considered real implemented baselines:
 - runtime state hardening for persisted data and restored flow
 - separated active workout draft from persisted history
 - deeper explainability inside workout feedback
+- history-aware prescription adjustment inside the plan layer
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:
@@ -451,6 +465,8 @@ This means programs are no longer only split + exercise names. They now carry ba
 
 The workout layer now also uses recent history to suggest the next session target for the active movement, and can hold or consolidate instead of always pushing progression.
 
+The program layer now also uses session history to slightly reduce, hold, or progress prescriptions before the user even enters the workout screen.
+
 The runtime layer now also cleans and stabilizes persisted data before using it inside the main loop, and no longer mixes the active session draft with workout history.
 
 The program layer now also explains why the current recommendation was chosen and what future behavior may change it.
@@ -484,6 +500,7 @@ The current MVP backbone now looks like this:
 19. progress tab reflects adherence and session-level progress
 20. programs tab explains why the current recommendation was chosen and what may change it
 21. workout loop explains why progression and completion guidance were chosen
+22. the plan layer adjusts prescription details from accumulated session history
 
 This is the strongest implemented loop so far.
 
@@ -508,13 +525,14 @@ Stable enough:
 - persistence for key loop data
 - explainable recommendation layer
 - explainable workout feedback layer
+- history-aware prescription adaptation
 - progress tab baseline
 - normalized runtime user approach
 - trust/disclaimer baseline
 
 Not yet fully hardened:
 - advanced progression logic
-- auto-adjusting prescription updates over time
+- broader auto-adjusting prescription updates over time
 - richer explanation of why specific exercises were chosen inside exercise-level selection too
 - perfect app-wide normalization
 - full test/runtime verification
@@ -558,9 +576,9 @@ Recommended next focus:
 - keep working from `/Users/user/Desktop/Gym App/gym-app.jsx`
 
 If continuing from the current momentum, the best next topic is:
-- progression-aware behavior beyond the current hint layer
+- broader prescription auto-adjustment beyond the current conservative layer
 or
-- auto-updating prescription behavior from accumulated session history
+- runtime verification of the current adaptive loop
 
 ---
 
@@ -629,6 +647,7 @@ The project now has:
 - progression-aware workout guidance
 - explainable recommendation layer
 - explainable workout feedback layer
+- history-aware prescription adaptation
 - trust/disclaimer product surfaces
 
 The project should now continue through focused implementation and hardening, not a return to broad planning.

@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `684427a`
-- Commit message: `Separate active workout draft from workout history`
+- Latest implementation commit: `7220fe0`
+- Commit message: `Add full plan explanation layer`
 
 ---
 
@@ -34,6 +34,7 @@ The project now has:
 - history-aware progression guidance based on multiple recent sessions
 - stronger runtime stability around persisted state and restored sessions
 - separation between active workout draft and persisted workout history
+- a full explanation layer for why the current program was selected and what may change it
 
 The project is now in:
 - implementation
@@ -171,6 +172,7 @@ Implemented:
 - activation of recommended program into workout flow
 - goal-specific programming style and cue
 - exercise-level prescription data per day
+- explanation layer for why the recommendation was chosen
 
 ### D. Static Program Alignment
 Static programs are no longer raw legacy cards.
@@ -336,6 +338,15 @@ Implemented:
 - program summary trust and safety reminder
 - AI coach disclaimer block
 
+### P. Plan Explanation Layer
+The programs tab now explains why the current recommendation exists.
+
+Implemented:
+- explanation block in the plan summary area
+- explanation block inside the recommendation card
+- clear reasons tied to goal, frequency, recovery, equipment, and limitations
+- explanation of what later changes may hold, consolidate, or progress the plan
+
 ---
 
 ## 6. Recent Hardening and Cleanup Work
@@ -431,6 +442,8 @@ The workout layer now also uses recent history to suggest the next session targe
 
 The runtime layer now also cleans and stabilizes persisted data before using it inside the main loop, and no longer mixes the active session draft with workout history.
 
+The program layer now also explains why the current recommendation was chosen and what future behavior may change it.
+
 ---
 
 ## 9. Current Real Product Loop
@@ -456,6 +469,7 @@ The current MVP backbone now looks like this:
 17. progress and logs persist across sessions
 18. app sanitizes persisted state and corrects invalid restored selections
 19. progress tab reflects adherence and session-level progress
+20. programs tab explains why the current recommendation was chosen and what may change it
 
 This is the strongest implemented loop so far.
 
@@ -478,6 +492,7 @@ Stable enough:
 - adherence-aware completion feedback
 - runtime stability around persisted data
 - persistence for key loop data
+- explainable recommendation layer
 - progress tab baseline
 - normalized runtime user approach
 - trust/disclaimer baseline
@@ -485,7 +500,7 @@ Stable enough:
 Not yet fully hardened:
 - advanced progression logic
 - auto-adjusting prescription updates over time
-- richer explanation of why specific exercises were chosen
+- richer explanation of why specific exercises were chosen inside exercise-level selection too
 - perfect app-wide normalization
 - full test/runtime verification
 
@@ -515,7 +530,7 @@ The most logical next work items are:
 2. connect progress history more strongly to goal-specific outcomes
 3. reduce remaining compatibility debt
 4. keep hardening the current loop with runtime verification
-5. improve explanation of why the plan is progressing, holding, or consolidating
+5. improve explanation of why the plan is progressing, holding, or consolidating inside workout feedback too
 
 ---
 
@@ -530,7 +545,7 @@ Recommended next focus:
 If continuing from the current momentum, the best next topic is:
 - progression-aware behavior beyond the current hint layer
 or
-- runtime hardening and verification of the current loop
+- deeper explainability inside workout/progression feedback
 
 ---
 
@@ -597,6 +612,7 @@ The project now has:
 - early goal-specific programming prescriptions
 - prescription adherence tracking
 - progression-aware workout guidance
+- explainable recommendation layer
 - trust/disclaimer product surfaces
 
 The project should now continue through focused implementation and hardening, not a return to broad planning.

@@ -1973,6 +1973,7 @@ function GymApp({ user, onLogout }) {
   const totalWeightChange = currentWeightValue !== null && startingWeightValue !== null
     ? (currentWeightValue - startingWeightValue).toFixed(1)
     : "0.0";
+  const parsedNewWeight = Number(newWeight);
 
   const userFilteredExercises = filterExercisesForUser(EXERCISES, runtimeUser);
   const muscles = ["همه", ...new Set(userFilteredExercises.map(e => getExercisePrimaryMuscle(e)))];
@@ -2056,6 +2057,10 @@ function GymApp({ user, onLogout }) {
   const planDisclaimerCopy = "اگر محدودیت یا درد واقعی داری، برنامه را محافظه‌کارانه اجرا کن و حرکات دردزا را حذف یا جایگزین کن.";
   const planExplanation = buildPlanExplanation(runtimeUser, recommendedProgram);
   const activateProgram = (program) => {
+    setWorkoutLog([]);
+    clearPerUserData(ACTIVE_WORKOUT_KEY, user.id);
+    setLogFeedback(null);
+    stopRest();
     setSelectedProgram(program);
     setSelectedProgramDay(0);
     const firstExercise = program.days?.[0]?.exercises?.[0] || "";
@@ -3000,11 +3005,19 @@ function GymApp({ user, onLogout }) {
               <div style={{ fontWeight: 700, marginBottom: 10 }}>ثبت وزن امروز</div>
               <div style={s.row}>
                 <input style={s.input} type="number" placeholder="وزن (kg)" value={newWeight} onChange={e => setNewWeight(e.target.value)} />
-                <button style={s.btn()} onClick={() => {
-                  if (!newWeight) return;
-                  setProgressData(p => [...p, { date: new Date().toLocaleDateString("fa-IR"), weight: parseFloat(newWeight) }]);
-                  setNewWeight("");
-                }}>ثبت</button>
+                <button
+                  style={{
+                    ...s.btn(parsedNewWeight > 0 ? accent : (dark ? "#2a2a2a" : "#ddd")),
+                    color: parsedNewWeight > 0 ? "#000" : sub,
+                    cursor: parsedNewWeight > 0 ? "pointer" : "not-allowed"
+                  }}
+                  disabled={!(parsedNewWeight > 0)}
+                  onClick={() => {
+                    if (!(parsedNewWeight > 0)) return;
+                    setProgressData(p => [...p, { date: new Date().toLocaleDateString("fa-IR"), weight: parsedNewWeight }]);
+                    setNewWeight("");
+                  }}
+                >ثبت</button>
               </div>
             </div>
           </div>

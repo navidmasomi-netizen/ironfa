@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `92202be`
-- Commit message: `Complete long-cycle progression behavior`
+- Latest implementation commit: `fdba5db`
+- Commit message: `Add richer progress trend analysis`
 
 ---
 
@@ -54,6 +54,7 @@ The project now has:
 - browser spot-check confirmed new adaptive copy in the programs tab and progression labels in the workout tab
 - progression test controls now provide deterministic UI triggers for increase-load, increase-reps, plateau-reset, and deload states
 - progression logic now also reads a longer cycle state and can switch between accumulate, intensify, stabilize, and reset phases
+- the progress tab now also summarizes trend direction for adherence, session volume, and weekly cadence instead of only showing raw stats
 - release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
 - a final release regression checklist now exists for release-candidate gating
 
@@ -602,6 +603,7 @@ Stable enough:
 - longer-cycle progression behavior beyond the short-horizon hint layer
 - adaptive plans isolated from active workout drafts
 - progress tab baseline
+- richer trend analysis inside the progress tab
 - normalized runtime user approach
 - trust/disclaimer baseline
 

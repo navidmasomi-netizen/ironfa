@@ -93,6 +93,9 @@ const DEMO_USER = {
   onboarded: true
 };
 
+const TRUST_BASELINE_COPY = "این برنامه از روی هدف، سطح، تعداد جلسات، تجهیزات، ریکاوری و محدودیت‌های ثبت‌شده تو ساخته می‌شود و قرار نیست جای تشخیص پزشکی یا مربی حضوری را بگیرد.";
+const DISCLAIMER_BASELINE_COPY = "اگر درد، آسیب، یا وضعیت پزشکی خاص داری، قبل از اجرای برنامه با متخصص واجد صلاحیت مشورت کن و هر حرکت دردزا را متوقف کن.";
+
 // ── Onboarding ──────────────────────────────────────────────────────────────
 function Onboarding({ baseUser, onFinish }) {
   const accent = "#e8ff00";
@@ -335,6 +338,20 @@ function Onboarding({ baseUser, onFinish }) {
                 <span style={{ color: item.highlight ? accent : "#f0f0f0", fontSize: 14, fontWeight: item.highlight ? 800 : 600, textAlign: "left", maxWidth: "55%" }}>{item.val}</span>
               </div>
             ))}
+            <div style={{
+              background: "#10161d",
+              border: "1px solid #24384f",
+              borderRadius: 12,
+              padding: "12px 14px",
+              marginTop: 14,
+              color: "#a9c7e8",
+              fontSize: 12,
+              lineHeight: 1.9
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>مرز محصول</div>
+              <div>{TRUST_BASELINE_COPY}</div>
+              <div style={{ color: "#87a7c9", marginTop: 6 }}>{DISCLAIMER_BASELINE_COPY}</div>
+            </div>
           </div>
         ) : current.fields}
       </div>
@@ -1023,6 +1040,43 @@ function buildRecommendedProgram(user) {
   };
 }
 
+function buildStaticProgram(program, user) {
+  const normalizedUser = normalizePersistedUser(user);
+  const filteredPool = filterExercisesForUser(EXERCISES, normalizedUser);
+  const goalKey = program.goal_key || normalizeSplitGoal(program.goal);
+  const frequency = program.days.length;
+  const personalizedDays = program.days.map(day => ({
+    ...day,
+    exercises: day.exercises.map(exerciseName => substituteExercise(exerciseName, normalizedUser, filteredPool)),
+  })).map(day => ({
+    ...day,
+    prescriptions: day.exercises.map(exerciseName =>
+      buildExercisePrescription(
+        exerciseName,
+        { ...normalizedUser, goal: GOAL_LABELS[goalKey] || normalizedUser.goal, training_level: LEVEL_LABELS[program.training_level] || normalizedUser.training_level },
+        goalKey,
+        frequency
+      )
+    ),
+  }));
+
+  return {
+    ...program,
+    level: LEVEL_LABELS[program.training_level] || program.level,
+    goal: GOAL_LABELS[goalKey] || program.goal,
+    programming_style: PROGRAMMING_STYLE_LABELS[goalKey] || "پیشروی پایه",
+    programming_cue: PROGRAMMING_CUE_LABELS[goalKey] || "",
+    split: {
+      split_family: frequency <= 3 ? "full_body" : frequency === 4 ? "upper_lower" : goalKey === "strength" ? "strength_split" : "ppl",
+      frequency,
+      goal: goalKey,
+      downgrade_applied: false,
+      notes: [],
+    },
+    days: personalizedDays,
+  };
+}
+
 const PROGRAMS = [
   {
     id: 1, name: "پایه قدرت — ۳ روز", training_level: "beginner", level: "مبتدی", goal_key: "strength", goal: "قدرت",
@@ -1152,6 +1206,9 @@ function WorkoutCompletePopup({ result, onClose, dark }) {
   const xpProgress = ((result.newXP - levelInfo.minXP) / (levelInfo.maxXP - levelInfo.minXP)) * 100;
   const completionPercent = result.day_total_exercises
     ? Math.round((result.day_completed_exercises / result.day_total_exercises) * 100)
+    : null;
+  const prescriptionAdherence = typeof result.prescription_adherence === "number"
+    ? Math.round(result.prescription_adherence * 100)
     : null;
 
   return (
@@ -1329,6 +1386,23 @@ function WorkoutCompletePopup({ result, onClose, dark }) {
           </div>
         )}
 
+        {prescriptionAdherence !== null && (
+          <div style={{
+            background: dark ? "#16131f" : "#f5efff",
+            border: "1px solid #6d4cc2",
+            borderRadius: 14, padding: "12px 16px", marginBottom: 14,
+            opacity: animStep >= 3 ? 1 : 0,
+            transform: animStep >= 3 ? "translateY(0)" : "translateY(10px)",
+            transition: "all 0.4s ease 0.48s"
+          }}>
+            <div style={{ fontSize: 12, color: dark ? "#b8a7ee" : "#6d4cc2", marginBottom: 4 }}>پایبندی به نسخه تمرین</div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: dark ? "#f0f0f0" : "#111" }}>
+              {prescriptionAdherence}% از prescription روز فعال ثبت شد
+              {result.prescription_summary ? ` · ${result.prescription_summary}` : ""}
+            </div>
+          </div>
+        )}
+
         {/* Stats */}
         <div style={{
           display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 20,
@@ -1480,6 +1554,31 @@ function GymApp({ user, onLogout }) {
   const latestSessionEntries = latestSessionKey ? sortedWorkoutLog.filter(log => sessionKeyOf(log) === latestSessionKey) : [];
   const latestSessionVolume = latestSessionEntries.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0);
   const latestSessionExercises = new Set(latestSessionEntries.map(log => log.name)).size;
+  const sessionAdherenceMap = uniqueSessionKeys.reduce((acc, sessionKey) => {
+    const sessionEntries = sortedWorkoutLog.filter(log => sessionKeyOf(log) === sessionKey);
+    const prescriptionTargets = sessionEntries
+      .filter(log => log.prescribed_sets)
+      .reduce((map, log) => {
+        if (!map[log.name]) map[log.name] = Number(log.prescribed_sets) || 0;
+        return map;
+      }, {});
+    const targetTotal = Object.values(prescriptionTargets).reduce((sum, sets) => sum + sets, 0);
+    const completedTotal = Object.entries(prescriptionTargets).reduce((sum, [name, targetSets]) => {
+      const loggedSets = sessionEntries
+        .filter(log => log.name === name)
+        .reduce((acc, log) => acc + (Number(log.sets) || 1), 0);
+      return sum + Math.min(targetSets, loggedSets);
+    }, 0);
+    acc[sessionKey] = targetTotal ? completedTotal / targetTotal : null;
+    return acc;
+  }, {});
+  const adherenceValues = Object.values(sessionAdherenceMap).filter(value => typeof value === "number");
+  const averagePrescriptionAdherence = adherenceValues.length
+    ? Math.round((adherenceValues.reduce((sum, value) => sum + value, 0) / adherenceValues.length) * 100)
+    : null;
+  const latestSessionAdherence = latestSessionKey && typeof sessionAdherenceMap[latestSessionKey] === "number"
+    ? Math.round(sessionAdherenceMap[latestSessionKey] * 100)
+    : null;
   const currentWeightValue = progressData[progressData.length - 1]?.weight ?? null;
   const startingWeightValue = progressData[0]?.weight ?? null;
   const totalWeightChange = currentWeightValue !== null && startingWeightValue !== null
@@ -1493,6 +1592,7 @@ function GymApp({ user, onLogout }) {
     e.name.includes(searchEx)
   );
   const recommendedProgram = buildRecommendedProgram(runtimeUser);
+  const staticPrograms = PROGRAMS.map(program => buildStaticProgram(program, runtimeUser));
   const splitNoteLabels = {
     beginner_downgrade: "به‌خاطر سطح فعلی، split ساده‌تر انتخاب شد.",
     low_recovery_downgrade: "به‌خاطر ریکاوری پایین، ساختار سبک‌تر انتخاب شد.",
@@ -1528,6 +1628,7 @@ function GymApp({ user, onLogout }) {
     { label: "ریکاوری", value: runtimeUser.recovery_quality || "نامشخص" },
   ];
   const planTrustCopy = "این خلاصه از روی هدف، سطح، تعداد جلسات، ریکاوری، تجهیزات و محدودیت‌های تو ساخته شده و برنامه پیشنهادی پایین بر همان اساس انتخاب شده است.";
+  const planDisclaimerCopy = "اگر محدودیت یا درد واقعی داری، برنامه را محافظه‌کارانه اجرا کن و حرکات دردزا را حذف یا جایگزین کن.";
   const activateProgram = (program) => {
     setSelectedProgram(program);
     setSelectedProgramDay(0);
@@ -1571,13 +1672,13 @@ function GymApp({ user, onLogout }) {
     if (!persisted?.programId) return;
     const restoredProgram = persisted.programId === "recommended"
       ? recommendedProgram
-      : PROGRAMS.find(program => String(program.id) === String(persisted.programId));
+      : staticPrograms.find(program => String(program.id) === String(persisted.programId));
     if (restoredProgram) {
       setSelectedProgram(restoredProgram);
       setSelectedProgramDay(Math.min(persisted.selectedDay || 0, Math.max(restoredProgram.days.length - 1, 0)));
     }
     persistedActivePlanRef.current = null;
-  }, [recommendedProgram, selectedProgram]);
+  }, [recommendedProgram, selectedProgram, staticPrograms]);
 
   useEffect(() => {
     if (!selectedProgram) {
@@ -1595,6 +1696,7 @@ function GymApp({ user, onLogout }) {
 
   const logSet = () => {
     if (!activeSet.name || !activeSet.weight || !activeSet.reps) return;
+    const prescribed = currentProgramPrescriptions.find(item => item.name === activeSet.name) || null;
     const entry = {
       ...activeSet,
       id: Date.now(),
@@ -1604,6 +1706,10 @@ function GymApp({ user, onLogout }) {
       day_name: currentWorkoutContext?.day_name || null,
       split_family: currentWorkoutContext?.split_family || null,
       is_recommended: currentWorkoutContext?.is_recommended || false,
+      prescribed_sets: prescribed?.sets || null,
+      prescribed_rep_range: prescribed?.rep_range || null,
+      prescribed_rest_range: prescribed?.rest_range || null,
+      prescribed_effort: prescribed?.effort || null,
     };
     setWorkoutLog(prev => [entry, ...prev]);
     const nextExercise = currentProgramDay
@@ -1632,6 +1738,26 @@ function GymApp({ user, onLogout }) {
       ? new Set(workoutLog.filter(log => log.day_name === currentProgramDay.day).map(log => log.name)).size
       : 0;
     const dayTotalExercises = currentProgramDay?.exercises?.length || 0;
+    const dayLogs = currentProgramDay
+      ? workoutLog.filter(log => log.day_name === currentProgramDay.day)
+      : [];
+    const prescriptionTargets = currentProgramPrescriptions.map(item => ({
+      name: item.name,
+      sets: Number(item.sets) || 0,
+    }));
+    const completedPrescriptionUnits = prescriptionTargets.reduce((sum, target) => {
+      const loggedSetsForExercise = dayLogs
+        .filter(log => log.name === target.name)
+        .reduce((acc, log) => acc + (Number(log.sets) || 1), 0);
+      return sum + Math.min(target.sets, loggedSetsForExercise);
+    }, 0);
+    const totalPrescriptionUnits = prescriptionTargets.reduce((sum, target) => sum + target.sets, 0);
+    const prescriptionAdherence = totalPrescriptionUnits
+      ? completedPrescriptionUnits / totalPrescriptionUnits
+      : null;
+    const prescriptionSummary = totalPrescriptionUnits
+      ? `${completedPrescriptionUnits} از ${totalPrescriptionUnits} ست هدف`
+      : null;
     const newStreak = updateStreak(gameData);
     const xpEarned = calcXPForWorkout(workoutLog.length);
     const newXP = gameData.xp + xpEarned;
@@ -1669,6 +1795,8 @@ function GymApp({ user, onLogout }) {
       session_volume: sessionVolume,
       day_completed_exercises: completedDayExercises,
       day_total_exercises: dayTotalExercises,
+      prescription_adherence: prescriptionAdherence,
+      prescription_summary: prescriptionSummary,
       totalWorkouts: newTotalWorkouts,
       newBadges,
       program_name: currentWorkoutContext?.program_name || null,
@@ -2040,6 +2168,20 @@ function GymApp({ user, onLogout }) {
                   محدودیت‌های درنظرگرفته‌شده: {runtimeUser.injury_or_limitation_flags.join("، ")}
                 </div>
               )}
+              <div style={{
+                background: dark ? "#121922" : "#f3f8ff",
+                border: `1px solid ${dark ? "#2b4157" : "#c7d9ef"}`,
+                borderRadius: 12,
+                padding: "10px 12px",
+                color: sub,
+                fontSize: 12,
+                lineHeight: 1.9,
+                marginBottom: 10
+              }}>
+                <div style={{ fontWeight: 700, color: text, marginBottom: 4 }}>یادآوری اعتماد و ایمنی</div>
+                <div>{TRUST_BASELINE_COPY}</div>
+                <div style={{ marginTop: 4 }}>{planDisclaimerCopy}</div>
+              </div>
               <button style={{ ...s.btn(), width: "100%" }} onClick={() => activateProgram(recommendedProgram)}>
                 مشاهده و شروع برنامه پیشنهادی
               </button>
@@ -2090,25 +2232,35 @@ function GymApp({ user, onLogout }) {
                 ✨ استفاده از برنامه پیشنهادی
               </button>
             </div>
-            {PROGRAMS.map(prog => (
+            {staticPrograms.map(prog => (
               <div key={prog.id} style={s.card}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{prog.name}</div>
+                    <div style={{ color: sub, fontSize: 12, marginBottom: 8 }}>
+                      {prog.programming_style}
+                      {prog.programming_cue ? ` · ${prog.programming_cue}` : ""}
+                    </div>
                     <div style={s.row}>
                       <span style={s.tag((LEVEL_LABELS[prog.training_level] || prog.level) === "مبتدی" ? "#0a8a2e" : (LEVEL_LABELS[prog.training_level] || prog.level) === "متوسط" ? "#e87e0a" : "#8a0a0a")}>
                         {LEVEL_LABELS[prog.training_level] || prog.level}
                       </span>
                       <span style={s.tag("#5a2de8")}>{GOAL_LABELS[prog.goal_key] || prog.goal}</span>
+                      {prog.split?.split_family && <span style={s.tag("#b38b00")}>{SPLIT_LABELS[prog.split.split_family] || prog.split.split_family}</span>}
                     </div>
                   </div>
                 </div>
                 {prog.days.map((day, i) => (
                   <div key={i} style={{ background: dark ? "#1a1a1a" : "#f8f8f8", borderRadius: 10, padding: 12, marginBottom: 8 }}>
                     <div style={{ fontWeight: 700, marginBottom: 6, color: accent }}>{day.day}</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {day.exercises.map((ex, j) => (
-                        <span key={j} style={{ background: dark ? "#2a2a2a" : "#eee", padding: "4px 10px", borderRadius: 8, fontSize: 13 }}>{ex}</span>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      {(day.prescriptions || []).map((item, j) => (
+                        <div key={j} style={{ background: dark ? "#2a2a2a" : "#eee", padding: "8px 10px", borderRadius: 8, fontSize: 13 }}>
+                          <div style={{ fontWeight: 700, marginBottom: 4 }}>{item.name}</div>
+                          <div style={{ color: sub, fontSize: 12 }}>
+                            {item.sets} ست · {item.rep_range} تکرار · استراحت {item.rest_range} · شدت {item.effort}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -2133,6 +2285,8 @@ function GymApp({ user, onLogout }) {
                 { label: "تغییر کل", val: `${totalWeightChange} kg`, color: red },
                 { label: "جلسات ۷ روز اخیر", val: weeklySessionKeys.length, color: "#0af" },
                 { label: "حرکت ثبت‌شده", val: uniqueLoggedExercises, color: "#a0f" },
+                { label: "میانگین پایبندی", val: averagePrescriptionAdherence !== null ? `${averagePrescriptionAdherence}%` : "—", color: "#8a5cff" },
+                { label: "پایبندی آخرین جلسه", val: latestSessionAdherence !== null ? `${latestSessionAdherence}%` : "—", color: "#6d4cc2" },
               ].map((item, i) => (
                 <div key={i} style={{ ...s.stat, border: `1px solid ${border}` }}>
                   <div style={{ fontSize: 22, fontWeight: 900, color: item.color }}>{item.val}</div>
@@ -2157,6 +2311,9 @@ function GymApp({ user, onLogout }) {
                 <div style={{ color: sub, fontSize: 13, lineHeight: 1.9 }}>
                   <div>آخرین جلسه: {latestSessionEntries[0].date}{latestSessionEntries[0].program_name ? ` · ${latestSessionEntries[0].program_name}` : ""}{latestSessionEntries[0].day_name ? ` · ${latestSessionEntries[0].day_name}` : ""}</div>
                   <div>{latestSessionExercises} حرکت منحصربه‌فرد · حجم تقریبی {latestSessionVolume}</div>
+                  {latestSessionAdherence !== null && (
+                    <div>پایبندی به prescription در آخرین جلسه: {latestSessionAdherence}%</div>
+                  )}
                 </div>
               ) : (
                 <div style={{ color: sub, fontSize: 13 }}>هنوز جلسه‌ای ثبت نشده. اولین تمرین را از تب برنامه یا تمرین شروع کن.</div>
@@ -2309,6 +2466,20 @@ function GymApp({ user, onLogout }) {
             <div style={s.title}>🤖 مربی هوشمند</div>
             <div style={{ ...s.card, background: dark ? "#0a0a1a" : "#f0f0ff", border: `1px solid ${dark ? "#2a2a5a" : "#c0c0ff"}` }}>
               <div style={{ fontSize: 13, color: sub, marginBottom: 8 }}>سوالت رو بپرس — جواب شخصی‌سازی‌شده بر اساس پروفایل تو</div>
+              <div style={{
+                background: dark ? "#11162a" : "#f6f4ff",
+                border: `1px solid ${dark ? "#38407a" : "#d2cbff"}`,
+                borderRadius: 12,
+                padding: "10px 12px",
+                fontSize: 12,
+                color: sub,
+                lineHeight: 1.9,
+                marginBottom: 12
+              }}>
+                <div style={{ fontWeight: 700, color: text, marginBottom: 4 }}>مرز مربی AI</div>
+                <div>پاسخ‌های این بخش برای راهنمایی عمومی تمرینی هستند و جای پزشک، فیزیوتراپیست یا مربی حضوری را نمی‌گیرند.</div>
+                <div style={{ marginTop: 4 }}>{DISCLAIMER_BASELINE_COPY}</div>
+              </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
                 {["برنامه هفته آینده؟", "برای حجم چی بخورم؟", "چطور زانو درد ندم؟", "بهترین حرکت سرشانه؟"].map(q => (
                   <button key={q} style={{ ...s.btn(dark ? "#1a1a3a" : "#e8e8ff"), color: dark ? "#aaf" : "#44f", padding: "6px 12px", fontSize: 12 }} onClick={() => setAiPrompt(q)}>{q}</button>

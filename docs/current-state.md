@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `5f2f9c7`
-- Commit message: `Use completed workout history for adaptive plans`
+- Latest implementation commit: `7bd662a`
+- Commit message: `Harden verification edge cases`
 
 ---
 
@@ -38,6 +38,8 @@ The project now has:
 - deeper explainability inside workout progression and completion feedback
 - history-aware prescription adjustments inside recommended and static programs
 - adaptive plans now read only completed workout history, not the active workout draft
+- switching programs now clears the active workout draft instead of mixing sessions across plans
+- invalid weight entries are blocked in the progress tab
 
 The project is now in:
 - implementation
@@ -310,9 +312,11 @@ Implemented:
 - clamp invalid selected program day back into a valid range
 - auto-correct active exercise if the current selection is no longer valid
 - prevent invalid log entries with non-positive weight or reps
+- prevent invalid weight progress entries with non-positive or non-numeric values
 - protect progress chart calculations when progress data is empty
 - separate current session draft from historical workout data
 - prevent adaptive planning from reacting to unfinished session drafts
+- clear the active workout draft before switching to another program
 
 ### M. Progress Tab Hardening
 The progress tab now uses more real session-derived data.
@@ -428,6 +432,8 @@ These are active enough to be considered real implemented baselines:
 - deeper explainability inside workout feedback
 - history-aware prescription adjustment inside the plan layer
 - adaptive plans driven only by completed workout history
+- safer program switching without cross-plan draft leakage
+- safer progress weight entry validation
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:

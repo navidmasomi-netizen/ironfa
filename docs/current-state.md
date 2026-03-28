@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `1b86286`
-- Commit message: `Remove exercise metadata legacy aliases`
+- Latest implementation commit: `7fabcf1`
+- Commit message: `Broaden adaptive prescription adjustments`
 
 ---
 
@@ -49,6 +49,7 @@ The project now has:
 - a real browser runtime pass has now validated the main user loop end-to-end
 - active UI paths now rely less on legacy display aliases and more on normalized goal/level helpers
 - core exercise objects no longer carry legacy `muscle` / `level` aliases
+- adaptive prescriptions now adjust rep range and rest range, not only sets and effort
 
 The project is now in:
 - implementation
@@ -391,6 +392,8 @@ Implemented:
 - hold behavior when recent exercise performance stalls
 - slight prescription progression when history is stable and recovery is good
 - adjustment notes shown directly inside the relevant prescription cards
+- rep range can now tighten or expand based on recent performance state
+- rest range can now lengthen when consolidation or hold behavior is safer
 
 ### Q. Workout Explainability Layer
 The workout loop now explains decision-making, not just outcomes.

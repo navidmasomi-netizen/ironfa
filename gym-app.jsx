@@ -896,6 +896,55 @@ function getProgressionTrend(logs = []) {
   };
 }
 
+function getLongTermProgressionCycle(logs = []) {
+  const cycleLogs = logs.slice(0, 9);
+  if (cycleLogs.length < 6) {
+    return {
+      phase: "baseline",
+      cycleLength: cycleLogs.length,
+      completedBlocks: 0,
+      averageAdherence: null,
+      averageVolume: 0,
+    };
+  }
+
+  const adherenceSamples = cycleLogs
+    .map(log => {
+      const prescribedSets = Number(log.prescribed_sets) || 0;
+      const loggedSets = Number(log.sets) || 0;
+      return prescribedSets ? Math.min(1, loggedSets / prescribedSets) : null;
+    })
+    .filter(value => typeof value === "number");
+  const averageAdherence = adherenceSamples.length
+    ? adherenceSamples.reduce((sum, value) => sum + value, 0) / adherenceSamples.length
+    : null;
+  const averageVolume = cycleLogs.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0) / cycleLogs.length;
+  const firstHalf = cycleLogs.slice(Math.floor(cycleLogs.length / 2));
+  const secondHalf = cycleLogs.slice(0, Math.floor(cycleLogs.length / 2));
+  const firstHalfVolume = firstHalf.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0);
+  const secondHalfVolume = secondHalf.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0);
+  const volumeTrendUp = secondHalfVolume > firstHalfVolume * 1.06;
+  const cycleLength = cycleLogs.length;
+  const completedBlocks = Math.floor(cycleLength / 3);
+
+  let phase = "accumulate";
+  if (averageAdherence !== null && averageAdherence < 0.65) {
+    phase = "reset";
+  } else if (completedBlocks >= 2 && volumeTrendUp && averageAdherence !== null && averageAdherence >= 0.82) {
+    phase = "intensify";
+  } else if (completedBlocks >= 2 && !volumeTrendUp) {
+    phase = "stabilize";
+  }
+
+  return {
+    phase,
+    cycleLength,
+    completedBlocks,
+    averageAdherence,
+    averageVolume,
+  };
+}
+
 function getProgressionSuggestion(exercise, prescription, logs = []) {
   if (!exercise || !prescription) return null;
   const { min, max } = parseRepRange(prescription.rep_range);
@@ -924,6 +973,7 @@ function getProgressionSuggestion(exercise, prescription, logs = []) {
   const lastSets = Number(latestLog.sets) || 1;
   const resolvedTargetSets = Number(prescription.sets) || lastSets;
   const trend = getProgressionTrend(logs);
+  const cycle = getLongTermProgressionCycle(logs);
 
   if (!min || !max) return null;
 
@@ -984,6 +1034,14 @@ function getProgressionSuggestion(exercise, prescription, logs = []) {
     }
   }
 
+  if (cycle.phase === "intensify" && (strategy === "increase_reps" || strategy === "increase_load")) {
+    message += " الان هم در فاز شدت چرخه‌ای هستی، پس فشار را با اجرای تمیز ولی قاطع جلو ببر.";
+  } else if (cycle.phase === "stabilize" && (strategy === "hold" || strategy === "consolidate")) {
+    message += " چرخه اخیر نشان می‌دهد فعلاً تثبیت کیفیت از فشار بیشتر مهم‌تر است.";
+  } else if (cycle.phase === "reset" && strategy !== "deload") {
+    message += " چرخه اخیر هم نشان می‌دهد بهتر است قبل از فشار بیشتر، یک بازتنظیم کوتاه داشته باشی.";
+  }
+
   return {
     lastWeight,
     lastReps,
@@ -994,11 +1052,88 @@ function getProgressionSuggestion(exercise, prescription, logs = []) {
     message,
     strategy,
     trend_label: trend.trendLabel,
+    cycle_phase: cycle.phase,
+    cycle_blocks: cycle.completedBlocks,
     average_reps: trend.averageReps ? Number(trend.averageReps.toFixed(1)) : null,
     average_adherence: typeof trend.averageAdherence === "number"
       ? Math.round(trend.averageAdherence * 100)
       : null,
   };
+}
+
+function getForcedProgressionSuggestion(scenario, exercise, prescription, logs = []) {
+  if (!exercise || !prescription || !scenario) return null;
+  const { min, max } = parseRepRange(prescription.rep_range);
+  const targetSets = Number(prescription.sets) || 1;
+  const latestLog = logs[0] || null;
+  const lastWeight = Number(latestLog?.weight) || 20;
+  const lastReps = Number(latestLog?.reps) || min || 8;
+
+  if (scenario === "increase_load") {
+    return {
+      lastWeight,
+      lastReps,
+      lastSets: Number(latestLog?.sets) || targetSets,
+      suggestedWeight: Number((lastWeight + 2.5).toFixed(1)),
+      suggestedReps: min || lastReps,
+      suggestedSets: targetSets,
+      message: `حالت تست فعال است: برای این حرکت افزایش وزنه را با ${Number((lastWeight + 2.5).toFixed(1))}kg و بازه ${min}-${max} ببین.`,
+      strategy: "increase_load",
+      trend_label: "test_increase_load",
+      average_reps: max || lastReps,
+      average_adherence: 100,
+    };
+  }
+
+  if (scenario === "increase_reps") {
+    return {
+      lastWeight,
+      lastReps,
+      lastSets: Number(latestLog?.sets) || targetSets,
+      suggestedWeight: lastWeight,
+      suggestedReps: Math.min(max || lastReps + 1, Math.max(min || 1, lastReps + 1)),
+      suggestedSets: targetSets,
+      message: `حالت تست فعال است: برای این حرکت ابتدا افزایش تکرار را با همان ${lastWeight}kg ببین.`,
+      strategy: "increase_reps",
+      trend_label: "test_increase_reps",
+      average_reps: Math.max(min || 1, (max || lastReps + 1) - 1),
+      average_adherence: 90,
+    };
+  }
+
+  if (scenario === "plateau_reset") {
+    return {
+      lastWeight,
+      lastReps,
+      lastSets: Number(latestLog?.sets) || targetSets,
+      suggestedWeight: lastWeight,
+      suggestedReps: Math.max(min || 1, lastReps),
+      suggestedSets: targetSets,
+      message: "حالت تست فعال است: این حرکت را در وضعیت ریست پلاتو می‌بینی؛ فعلاً بار را نگه دار و با اجرای تمیز reset کن.",
+      strategy: "plateau_reset",
+      trend_label: "test_plateau_reset",
+      average_reps: Math.max(min || 1, lastReps),
+      average_adherence: 88,
+    };
+  }
+
+  if (scenario === "deload") {
+    return {
+      lastWeight,
+      lastReps,
+      lastSets: Number(latestLog?.sets) || targetSets,
+      suggestedWeight: Number((lastWeight * 0.9).toFixed(1)),
+      suggestedReps: min || 8,
+      suggestedSets: Math.max(1, targetSets - 1),
+      message: `حالت تست فعال است: این حرکت را در وضعیت دیلود کوتاه می‌بینی؛ بار را به ${Number((lastWeight * 0.9).toFixed(1))}kg کم کن و نسخه را سبک‌تر اجرا کن.`,
+      strategy: "deload",
+      trend_label: "test_deload",
+      average_reps: min || 8,
+      average_adherence: 45,
+    };
+  }
+
+  return getProgressionSuggestion(exercise, prescription, logs);
 }
 
 function buildSyntheticProgressionLogs({
@@ -1284,6 +1419,7 @@ function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = []
 
   const normalizedUser = normalizePersistedUser(user);
   const trend = getProgressionTrend(logs);
+  const cycle = getLongTermProgressionCycle(logs);
   const isIsolation = exercise.complexity === "isolation";
   const minSets = isIsolation ? 2 : 3;
   let sets = Number(prescription.sets) || minSets;
@@ -1350,6 +1486,28 @@ function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = []
     adjustment_note = "به‌خاطر ثبت‌های پایدار اخیر و ریکاوری خوب، این حرکت کمی حجم بیشتری گرفته و بازه اجرای آن هم کمی جلوتر رفته است.";
   }
 
+  if (cycle.phase === "intensify" && progression_state === "baseline") {
+    sets = Math.max(minSets, sets - (isIsolation ? 0 : 1));
+    if (restRange.min && restRange.max && !isIsolation) {
+      rest_range = formatRestRange(restRange.min + 15, restRange.max + 15, rest_range);
+    }
+    effort = normalizeSplitGoal(normalizedUser.goal) === "strength" ? "1-2 RIR" : "1-2 RIR";
+    progression_state = "intensify";
+    adjustment_note = "چرخه اخیر این حرکت به فاز شدت رسیده، پس حجم کمی جمع‌تر شده تا اجرای قوی‌تر و بار مؤثرتر جلو برود.";
+  } else if (cycle.phase === "accumulate" && progression_state === "baseline" && !isIsolation && sets < 5) {
+    sets += 1;
+    progression_state = "accumulate";
+    adjustment_note = "چرخه اخیر این حرکت هنوز در فاز جمع‌کردن حجم است، پس یک ست بیشتر برای ساختن پایه پایدار نگه داشته شده.";
+  } else if (cycle.phase === "reset" && progression_state === "baseline") {
+    sets = Math.max(minSets, sets - 1);
+    if (repRange.min && repRange.max) {
+      rep_range = formatRepRange(repRange.min, Math.max(repRange.min, repRange.max - 1), rep_range);
+    }
+    effort = "3-4 RIR";
+    progression_state = "cycle_reset";
+    adjustment_note = "چرخه اخیر این حرکت به reset نیاز دارد، پس نسخه فعلاً کمی سبک‌تر شده تا از نو با کیفیت خوب جلو برود.";
+  }
+
   return {
     sets,
     rep_range,
@@ -1357,6 +1515,8 @@ function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = []
     effort,
     progression_state,
     adjustment_note,
+    cycle_phase: cycle.phase,
+    cycle_blocks: cycle.completedBlocks,
   };
 }
 
@@ -1386,6 +1546,8 @@ function buildExercisePrescription(exerciseName, user, goalOverride, frequencyOv
     programming_focus: PROGRAMMING_STYLE_LABELS[goal] || "پیشروی پایه",
     progression_state: adjustment.progression_state,
     adjustment_note: adjustment.adjustment_note,
+    cycle_phase: adjustment.cycle_phase,
+    cycle_blocks: adjustment.cycle_blocks,
   };
 }
 
@@ -2073,7 +2235,6 @@ export default function App() {
 
 function GymApp({ user, onLogout }) {
   const runtimeUser = normalizePersistedUser(user);
-  const isLocalRuntime = typeof window !== "undefined" && ["127.0.0.1", "localhost"].includes(window.location.hostname);
   const persistedActivePlanRef = useRef(getActivePlan(user.id));
   const defaultProgressData = [
     { date: "۱۴۰۳/۱/۱", weight: 80 }, { date: "۱۴۰۳/۱/۸", weight: 79.5 },
@@ -2103,6 +2264,7 @@ function GymApp({ user, onLogout }) {
   const [workoutPopup, setWorkoutPopup] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [selectedProgramDay, setSelectedProgramDay] = useState(persistedActivePlanRef.current?.selectedDay || 0);
+  const [progressionTestScenario, setProgressionTestScenario] = useState(null);
   const userProfile = {
     name: runtimeUser.name,
     goal: runtimeUser.goal,
@@ -2200,7 +2362,9 @@ function GymApp({ user, onLogout }) {
   const activeExerciseHistory = activeExercisePrescription
     ? sortedWorkoutLog.filter(log => log.name === activeExercisePrescription.name).slice(0, 5)
     : [];
-  const activeExerciseProgression = getProgressionSuggestion(activeExercise, activeExercisePrescription, activeExerciseHistory);
+  const activeExerciseProgression = progressionTestScenario
+    ? getForcedProgressionSuggestion(progressionTestScenario, activeExercise, activeExercisePrescription, activeExerciseHistory)
+    : getProgressionSuggestion(activeExercise, activeExercisePrescription, activeExerciseHistory);
   const currentExerciseLoggedSets = activeExercisePrescription
     ? currentDayLogs
         .filter(log => log.name === activeExercisePrescription.name)
@@ -2260,18 +2424,7 @@ function GymApp({ user, onLogout }) {
   ];
   const applyProgressionTestScenario = (scenario) => {
     if (!activeExercisePrescription) return;
-    const syntheticLogs = buildSyntheticProgressionLogs({
-      exerciseName: activeExercisePrescription.name,
-      prescription: activeExercisePrescription,
-      currentWorkoutContext,
-      scenario,
-    });
-    if (!syntheticLogs.length) return;
-    setWorkoutHistory(prev => [
-      ...syntheticLogs,
-      ...prev.filter(log => !(log.synthetic_progression_test && log.name === activeExercisePrescription.name)),
-    ]);
-    setWorkoutLog(prev => prev.filter(log => !(log.synthetic_progression_test && log.name === activeExercisePrescription.name)));
+    setProgressionTestScenario(scenario);
     setLogFeedback({
       name: activeExercisePrescription.name,
       nextExercise: `سناریوی تست ${scenario} اعمال شد`,
@@ -2279,14 +2432,14 @@ function GymApp({ user, onLogout }) {
   };
   const clearProgressionTestScenario = () => {
     if (!activeExercisePrescription) return;
-    setWorkoutHistory(prev => prev.filter(log => !(log.synthetic_progression_test && log.name === activeExercisePrescription.name)));
-    setWorkoutLog(prev => prev.filter(log => !(log.synthetic_progression_test && log.name === activeExercisePrescription.name)));
+    setProgressionTestScenario(null);
     setLogFeedback({
       name: activeExercisePrescription.name,
       nextExercise: "لاگ تستی این حرکت پاک شد",
     });
   };
   const activateProgram = (program) => {
+    setProgressionTestScenario(null);
     setWorkoutLog([]);
     clearPerUserData(ACTIVE_WORKOUT_KEY, user.id);
     setLogFeedback(null);
@@ -2298,6 +2451,7 @@ function GymApp({ user, onLogout }) {
     setTab("workout");
   };
   const selectProgramDay = (dayIndex) => {
+    setProgressionTestScenario(null);
     setLogFeedback(null);
     stopRest();
     setSelectedProgramDay(dayIndex);
@@ -2767,6 +2921,82 @@ function GymApp({ user, onLogout }) {
               </div>
             )}
 
+            <div
+              style={{
+                ...s.card,
+                background: dark ? "#241600" : "#fff4d9",
+                border: "2px dashed #c98a00",
+              }}
+            >
+              <div style={{ fontWeight: 800, marginBottom: 8, color: dark ? "#f0d7a0" : "#7b5200" }}>ابزار تست پیشروی</div>
+              <div style={{ color: sub, fontSize: 12, lineHeight: 1.8, marginBottom: 10 }}>
+                برای بررسی حالت‌های `افزایش وزنه`، `افزایش تکرار`، `ریست پلاتو` و `دیلود کوتاه` از این دکمه‌ها استفاده کن.
+              </div>
+              <div
+                style={{
+                  background: dark ? "#1b1b1b" : "#fff",
+                  border: `1px solid ${border}`,
+                  borderRadius: 10,
+                  padding: "8px 10px",
+                  marginBottom: 10,
+                  fontSize: 12,
+                  color: text,
+                }}
+              >
+                وضعیت فعلی تست:
+                {" "}
+                <strong>
+                  {activeExerciseProgression?.strategy === "deload" ? "دیلود کوتاه"
+                    : activeExerciseProgression?.strategy === "plateau_reset" ? "ریست پلاتو"
+                    : activeExerciseProgression?.strategy === "increase_load" ? "افزایش وزنه"
+                    : activeExerciseProgression?.strategy === "increase_reps" ? "افزایش تکرار"
+                    : activeExerciseProgression?.strategy === "consolidate" ? "تثبیت اجرا"
+                    : activeExerciseProgression?.strategy === "hold" ? "نگه‌داشتن بار"
+                    : "پیش‌فرض"}
+                </strong>
+                {progressionTestScenario && (
+                  <span style={{ color: sub }}> · سناریوی تست فعال است</span>
+                )}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                <button
+                  style={{ ...s.btn("#0a8a2e"), color: "#fff", padding: "6px 10px", fontSize: 12 }}
+                  onClick={() => applyProgressionTestScenario("increase_load")}
+                  disabled={!activeExercisePrescription}
+                >
+                  تست افزایش وزنه
+                </button>
+                <button
+                  style={{ ...s.btn("#2f6ea5"), color: "#fff", padding: "6px 10px", fontSize: 12 }}
+                  onClick={() => applyProgressionTestScenario("increase_reps")}
+                  disabled={!activeExercisePrescription}
+                >
+                  تست افزایش تکرار
+                </button>
+                <button
+                  style={{ ...s.btn("#8a450a"), color: "#fff", padding: "6px 10px", fontSize: 12 }}
+                  onClick={() => applyProgressionTestScenario("plateau_reset")}
+                  disabled={!activeExercisePrescription}
+                >
+                  تست ریست پلاتو
+                </button>
+                <button
+                  style={{ ...s.btn("#8a0a0a"), color: "#fff", padding: "6px 10px", fontSize: 12 }}
+                  onClick={() => applyProgressionTestScenario("deload")}
+                  disabled={!activeExercisePrescription}
+                >
+                  تست دیلود
+                </button>
+              </div>
+              <button
+                style={{ ...s.btn(dark ? "#2a2a2a" : "#ddd"), color: text, padding: "6px 10px", fontSize: 12 }}
+                onClick={clearProgressionTestScenario}
+                disabled={!activeExercisePrescription}
+              >
+                پاک کردن لاگ تستی این حرکت
+              </button>
+            </div>
+
             {/* Rest Timer */}
             <div style={{ ...s.card, textAlign: "center", background: restRunning ? (dark ? "#1a1100" : "#fffbea") : card }}>
               <div style={{ fontSize: 13, color: sub, marginBottom: 6 }}>تایمر استراحت</div>
@@ -2937,28 +3167,6 @@ function GymApp({ user, onLogout }) {
                     }))}
                   >
                     استفاده از پیشنهاد
-                  </button>
-                </div>
-              )}
-              {isLocalRuntime && activeExercisePrescription && (
-                <div style={{
-                  background: dark ? "#1b1200" : "#fff7e8",
-                  border: "1px dashed #c98a00",
-                  borderRadius: 10,
-                  padding: "10px 12px",
-                  marginBottom: 10,
-                  fontSize: 12,
-                  color: dark ? "#f0d7a0" : "#7b5200"
-                }}>
-                  <div style={{ fontWeight: 700, marginBottom: 8 }}>ابزار تست محلی پیشروی</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                    <button style={{ ...s.btn("#0a8a2e"), color: "#fff", padding: "6px 10px", fontSize: 12 }} onClick={() => applyProgressionTestScenario("increase_load")}>تست افزایش وزنه</button>
-                    <button style={{ ...s.btn("#2f6ea5"), color: "#fff", padding: "6px 10px", fontSize: 12 }} onClick={() => applyProgressionTestScenario("increase_reps")}>تست افزایش تکرار</button>
-                    <button style={{ ...s.btn("#8a450a"), color: "#fff", padding: "6px 10px", fontSize: 12 }} onClick={() => applyProgressionTestScenario("plateau_reset")}>تست ریست پلاتو</button>
-                    <button style={{ ...s.btn("#8a0a0a"), color: "#fff", padding: "6px 10px", fontSize: 12 }} onClick={() => applyProgressionTestScenario("deload")}>تست دیلود</button>
-                  </div>
-                  <button style={{ ...s.btn(dark ? "#2a2a2a" : "#ddd"), color: text, padding: "6px 10px", fontSize: 12 }} onClick={clearProgressionTestScenario}>
-                    پاک کردن لاگ تستی این حرکت
                   </button>
                 </div>
               )}

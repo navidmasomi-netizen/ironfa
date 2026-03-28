@@ -7,13 +7,18 @@ const WORKOUT_LOG_KEY = "ironfa_workout_log";
 const ACTIVE_WORKOUT_KEY = "ironfa_active_workout";
 const PROGRESS_DATA_KEY = "ironfa_progress_data";
 
+function canUseStorage() {
+  return typeof localStorage !== "undefined";
+}
+
 function getUsers() {
+  if (!canUseStorage()) return [];
   try { return JSON.parse(localStorage.getItem(USERS_KEY) || "[]"); } catch { return []; }
 }
-function saveUsers(users) { localStorage.setItem(USERS_KEY, JSON.stringify(users)); }
-function getSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; } }
-function saveSession(user) { localStorage.setItem(SESSION_KEY, JSON.stringify(user)); }
-function clearSession() { localStorage.removeItem(SESSION_KEY); }
+function saveUsers(users) { if (canUseStorage()) localStorage.setItem(USERS_KEY, JSON.stringify(users)); }
+function getSession() { if (!canUseStorage()) return null; try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; } }
+function saveSession(user) { if (canUseStorage()) localStorage.setItem(SESSION_KEY, JSON.stringify(user)); }
+function clearSession() { if (canUseStorage()) localStorage.removeItem(SESSION_KEY); }
 function getActivePlans() {
   try { return JSON.parse(localStorage.getItem(ACTIVE_PLAN_KEY) || "{}"); } catch { return {}; }
 }
@@ -142,8 +147,7 @@ function normalizePersistedLimitations(limitations, injury) {
   return ["ندارم"];
 }
 
-function normalizePersistedUser(user) {
-  if (!user) return null;
+function toCanonicalUserShape(user) {
   const trainingLevel = normalizePersistedLevel(user.training_level || user.level);
   const sex = normalizePersistedSex(user.sex || user.gender);
   const trainingDays = Number(user.training_days_per_week || user.workoutDays || 3);
@@ -163,6 +167,44 @@ function normalizePersistedUser(user) {
     injury_or_limitation_flags: limitations,
   };
 }
+
+function migrateLegacyUserShape(user) {
+  if (!user) return null;
+  return toCanonicalUserShape(user);
+}
+
+function normalizePersistedUser(user) {
+  if (!user) return null;
+  return {
+    ...user,
+    training_level: normalizePersistedLevel(user.training_level),
+    sex: normalizePersistedSex(user.sex),
+    training_days_per_week: Number(user.training_days_per_week || 3),
+    session_duration: Number(user.session_duration || 60),
+    equipment_access: normalizePersistedEquipment(user.equipment_access),
+    recovery_quality: normalizePersistedRecovery(user.recovery_quality),
+    injury_or_limitation_flags: normalizePersistedLimitations(user.injury_or_limitation_flags),
+  };
+}
+
+function migratePersistedAuthData() {
+  if (!canUseStorage()) return;
+  try {
+    const rawUsers = getUsers();
+    if (Array.isArray(rawUsers) && rawUsers.length) {
+      const migratedUsers = rawUsers.map(migrateLegacyUserShape);
+      localStorage.setItem(USERS_KEY, JSON.stringify(migratedUsers));
+    }
+    const rawSession = getSession();
+    if (rawSession) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(migrateLegacyUserShape(rawSession)));
+    }
+  } catch {
+    // Keep runtime resilient if legacy storage is malformed.
+  }
+}
+
+migratePersistedAuthData();
 
 function getDisplayGoal(goal) {
   const normalizedGoal = normalizeSplitGoal(goal);

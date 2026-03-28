@@ -1614,11 +1614,15 @@ function WorkoutCompletePopup({ result, onClose, dark }) {
       background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)",
       display: "flex", alignItems: "center", justifyContent: "center",
       fontFamily: "'Vazirmatn','Tahoma',sans-serif", direction: "rtl", padding: 20,
+      overflowY: "auto",
     }}>
       <div style={{
         background: dark ? "#111" : "#fff",
         border: `2px solid ${leveledUp ? accent : "#2a2a2a"}`,
         borderRadius: 24, padding: 28, maxWidth: 360, width: "100%",
+        maxHeight: "calc(100vh - 40px)",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
         transform: animStep >= 1 ? "scale(1)" : "scale(0.8)",
         opacity: animStep >= 1 ? 1 : 0,
         transition: "all 0.4s cubic-bezier(0.34,1.56,0.64,1)",
@@ -2223,6 +2227,7 @@ function GymApp({ user, onLogout }) {
 
   const finishWorkout = () => {
     if (workoutLog.length === 0) return;
+    stopRest();
     const uniqueExercises = new Set(workoutLog.map(log => log.name)).size;
     const completedSets = workoutLog.reduce((sum, log) => sum + (Number(log.sets) || 1), 0);
     const sessionVolume = workoutLog.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0);

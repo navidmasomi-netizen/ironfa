@@ -78,13 +78,13 @@ Its purpose is to re-check the core loop after the latest implementation, harden
 ## 8. Progression and Adaptive Behavior
 
 - [x] Confirm progression labels still render:
-- [ ] `افزایش وزنه`
-- [ ] `افزایش تکرار`
+- [x] `افزایش وزنه`
+- [x] `افزایش تکرار`
 - [x] `تثبیت اجرا`
 - [x] `نگه‌داشتن بار`
-- [ ] Confirm plateau/deload labels render when triggered:
-- [ ] `ریست پلاتو`
-- [ ] `دیلود کوتاه`
+- [x] Confirm plateau/deload labels render when triggered:
+- [x] `ریست پلاتو`
+- [x] `دیلود کوتاه`
 - [x] Confirm adaptive notes in the programs tab still match prescription changes.
 
 ---
@@ -112,6 +112,6 @@ Its purpose is to re-check the core loop after the latest implementation, harden
 - [ ] No new issues found
 - [x] Issues recorded separately
 
-- Progression states `تثبیت اجرا` and `نگه‌داشتن بار` were confirmed in the browser.
+- Progression states `افزایش وزنه`, `افزایش تکرار`, `تثبیت اجرا`, and `نگه‌داشتن بار` were confirmed in the browser.
 - Adaptive prescription note rendering was confirmed in the programs tab.
-- Plateau/deload states were implemented and code-level checked, but their browser-triggered labels were not deterministically reproduced during this pass.
+- Plateau/deload states were deterministically triggered and confirmed in the workout tab through the local progression test controls.

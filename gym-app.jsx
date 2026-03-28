@@ -1001,6 +1001,71 @@ function getProgressionSuggestion(exercise, prescription, logs = []) {
   };
 }
 
+function buildSyntheticProgressionLogs({
+  exerciseName,
+  prescription,
+  currentWorkoutContext,
+  scenario,
+}) {
+  const { min, max } = parseRepRange(prescription?.rep_range);
+  const targetSets = Number(prescription?.sets) || 3;
+  const baseWeight = 20;
+  const now = Date.now();
+  const buildEntry = (overrides, index) => ({
+    id: now - index,
+    created_at: now - (index * 60000),
+    date: new Date(now - (index * 60000)).toLocaleDateString("fa-IR"),
+    name: exerciseName,
+    weight: baseWeight,
+    reps: min || 8,
+    sets: targetSets,
+    program_name: currentWorkoutContext?.program_name || "سناریوی تست",
+    day_name: currentWorkoutContext?.day_name || "روز تست",
+    split_family: currentWorkoutContext?.split_family || null,
+    is_recommended: currentWorkoutContext?.is_recommended || false,
+    prescribed_sets: targetSets,
+    prescribed_rep_range: prescription?.rep_range || "8-12",
+    prescribed_rest_range: prescription?.rest_range || "60-90 ثانیه",
+    prescribed_effort: prescription?.effort || "2 RIR",
+    synthetic_progression_test: true,
+    ...overrides,
+  });
+
+  if (scenario === "increase_load") {
+    return [
+      buildEntry({ reps: max || 10, weight: baseWeight + 2.5 }, 1),
+      buildEntry({ reps: Math.max(min || 8, (max || 10) - 1), weight: baseWeight }, 2),
+      buildEntry({ reps: Math.max(min || 8, (max || 10) - 2), weight: baseWeight }, 3),
+    ];
+  }
+
+  if (scenario === "increase_reps") {
+    return [
+      buildEntry({ reps: Math.max(min || 8, (max || 10) - 1), weight: baseWeight }, 1),
+      buildEntry({ reps: Math.max(min || 8, (max || 10) - 2), weight: baseWeight }, 2),
+      buildEntry({ reps: Math.max(min || 8, (max || 10) - 3), weight: baseWeight }, 3),
+    ];
+  }
+
+  if (scenario === "plateau_reset") {
+    return [
+      buildEntry({ reps: Math.max(min || 8, Math.min(max || 10, min || 8)), weight: baseWeight }, 1),
+      buildEntry({ reps: Math.max(min || 8, Math.min(max || 10, min || 8)), weight: baseWeight }, 2),
+      buildEntry({ reps: Math.max(min || 8, Math.min(max || 10, min || 8)), weight: baseWeight }, 3),
+    ];
+  }
+
+  if (scenario === "deload") {
+    return [
+      buildEntry({ reps: min || 8, weight: baseWeight, sets: 1 }, 1),
+      buildEntry({ reps: min || 8, weight: baseWeight, sets: 1 }, 2),
+      buildEntry({ reps: min || 8, weight: baseWeight, sets: 1 }, 3),
+    ];
+  }
+
+  return [];
+}
+
 function getRecommendedRepsFromRange(repRange) {
   const { min, max } = parseRepRange(repRange);
   if (!min || !max) return "";
@@ -2008,6 +2073,7 @@ export default function App() {
 
 function GymApp({ user, onLogout }) {
   const runtimeUser = normalizePersistedUser(user);
+  const isLocalRuntime = typeof window !== "undefined" && ["127.0.0.1", "localhost"].includes(window.location.hostname);
   const persistedActivePlanRef = useRef(getActivePlan(user.id));
   const defaultProgressData = [
     { date: "۱۴۰۳/۱/۱", weight: 80 }, { date: "۱۴۰۳/۱/۸", weight: 79.5 },
@@ -2192,6 +2258,34 @@ function GymApp({ user, onLogout }) {
     { label: "split", value: currentWorkoutContext?.split_family || recommendedProgram.split.split_family || "نامشخص" },
     { label: "محدودیت‌ها", value: (userProfile.injury_or_limitation_flags || []).join("، ") || "ندارد" },
   ];
+  const applyProgressionTestScenario = (scenario) => {
+    if (!activeExercisePrescription) return;
+    const syntheticLogs = buildSyntheticProgressionLogs({
+      exerciseName: activeExercisePrescription.name,
+      prescription: activeExercisePrescription,
+      currentWorkoutContext,
+      scenario,
+    });
+    if (!syntheticLogs.length) return;
+    setWorkoutHistory(prev => [
+      ...syntheticLogs,
+      ...prev.filter(log => !(log.synthetic_progression_test && log.name === activeExercisePrescription.name)),
+    ]);
+    setWorkoutLog(prev => prev.filter(log => !(log.synthetic_progression_test && log.name === activeExercisePrescription.name)));
+    setLogFeedback({
+      name: activeExercisePrescription.name,
+      nextExercise: `سناریوی تست ${scenario} اعمال شد`,
+    });
+  };
+  const clearProgressionTestScenario = () => {
+    if (!activeExercisePrescription) return;
+    setWorkoutHistory(prev => prev.filter(log => !(log.synthetic_progression_test && log.name === activeExercisePrescription.name)));
+    setWorkoutLog(prev => prev.filter(log => !(log.synthetic_progression_test && log.name === activeExercisePrescription.name)));
+    setLogFeedback({
+      name: activeExercisePrescription.name,
+      nextExercise: "لاگ تستی این حرکت پاک شد",
+    });
+  };
   const activateProgram = (program) => {
     setWorkoutLog([]);
     clearPerUserData(ACTIVE_WORKOUT_KEY, user.id);
@@ -2843,6 +2937,28 @@ function GymApp({ user, onLogout }) {
                     }))}
                   >
                     استفاده از پیشنهاد
+                  </button>
+                </div>
+              )}
+              {isLocalRuntime && activeExercisePrescription && (
+                <div style={{
+                  background: dark ? "#1b1200" : "#fff7e8",
+                  border: "1px dashed #c98a00",
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  marginBottom: 10,
+                  fontSize: 12,
+                  color: dark ? "#f0d7a0" : "#7b5200"
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: 8 }}>ابزار تست محلی پیشروی</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                    <button style={{ ...s.btn("#0a8a2e"), color: "#fff", padding: "6px 10px", fontSize: 12 }} onClick={() => applyProgressionTestScenario("increase_load")}>تست افزایش وزنه</button>
+                    <button style={{ ...s.btn("#2f6ea5"), color: "#fff", padding: "6px 10px", fontSize: 12 }} onClick={() => applyProgressionTestScenario("increase_reps")}>تست افزایش تکرار</button>
+                    <button style={{ ...s.btn("#8a450a"), color: "#fff", padding: "6px 10px", fontSize: 12 }} onClick={() => applyProgressionTestScenario("plateau_reset")}>تست ریست پلاتو</button>
+                    <button style={{ ...s.btn("#8a0a0a"), color: "#fff", padding: "6px 10px", fontSize: 12 }} onClick={() => applyProgressionTestScenario("deload")}>تست دیلود</button>
+                  </div>
+                  <button style={{ ...s.btn(dark ? "#2a2a2a" : "#ddd"), color: text, padding: "6px 10px", fontSize: 12 }} onClick={clearProgressionTestScenario}>
+                    پاک کردن لاگ تستی این حرکت
                   </button>
                 </div>
               )}

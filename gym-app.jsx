@@ -1126,7 +1126,56 @@ function getPrescriptionSetCount(exercise, { goal, trainingLevel, recoveryQualit
   return Math.max(isIsolation ? 2 : 3, sets);
 }
 
-function buildExercisePrescription(exerciseName, user, goalOverride, frequencyOverride) {
+function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = [], user) {
+  if (!exercise || !prescription || !logs.length) {
+    return {
+      sets: prescription?.sets || 0,
+      effort: prescription?.effort || "2 RIR",
+      progression_state: "baseline",
+      adjustment_note: null,
+    };
+  }
+
+  const normalizedUser = normalizePersistedUser(user);
+  const trend = getProgressionTrend(logs);
+  const isIsolation = exercise.complexity === "isolation";
+  const minSets = isIsolation ? 2 : 3;
+  let sets = Number(prescription.sets) || minSets;
+  let effort = prescription.effort;
+  let progression_state = "baseline";
+  let adjustment_note = null;
+
+  if (trend.needsConsolidation) {
+    sets = Math.max(minSets, sets - 1);
+    effort = "3-4 RIR";
+    progression_state = "consolidate";
+    adjustment_note = "به‌خاطر پایبندی پایین در چند جلسه اخیر، حجم این حرکت کمی محافظه‌کارانه‌تر نگه داشته شده.";
+  } else if (trend.stalled) {
+    effort = "2-3 RIR";
+    progression_state = "hold";
+    adjustment_note = "به‌خاطر ایست نسبی در ثبت‌های اخیر، فشار این حرکت فعلاً تثبیت شده تا اجرای آن تمیزتر شود.";
+  } else if (
+    trend.trendLabel === "advancing" &&
+    trend.averageAdherence !== null &&
+    trend.averageAdherence >= 0.85 &&
+    normalizeSplitRecovery(normalizedUser.recovery_quality) === "high" &&
+    !isIsolation &&
+    sets < 5
+  ) {
+    sets += 1;
+    progression_state = "progress";
+    adjustment_note = "به‌خاطر ثبت‌های پایدار اخیر و ریکاوری خوب، این حرکت کمی حجم بیشتری گرفته است.";
+  }
+
+  return {
+    sets,
+    effort,
+    progression_state,
+    adjustment_note,
+  };
+}
+
+function buildExercisePrescription(exerciseName, user, goalOverride, frequencyOverride, logs = []) {
   const normalizedUser = normalizePersistedUser(user);
   const exercise = getExerciseByName(exerciseName);
   const goal = goalOverride || normalizeSplitGoal(normalizedUser.goal);
@@ -1134,14 +1183,24 @@ function buildExercisePrescription(exerciseName, user, goalOverride, frequencyOv
   const recoveryQuality = normalizeSplitRecovery(normalizedUser.recovery_quality);
   const sessionDuration = Number(normalizedUser.session_duration) || 60;
   const frequency = Number(frequencyOverride || normalizedUser.training_days_per_week) || 3;
-
-  return {
-    name: exerciseName,
+  const basePrescription = {
     sets: getPrescriptionSetCount(exercise, { goal, trainingLevel, recoveryQuality, sessionDuration, frequency }),
     rep_range: getPrescriptionRepRange(exercise, goal),
     rest_range: getPrescriptionRestRange(exercise, goal),
     effort: getPrescriptionEffort(goal, trainingLevel),
+  };
+  const historyLogs = logs.filter(log => log.name === exerciseName).slice(0, 5);
+  const adjustment = getHistoryAwarePrescriptionAdjustment(exercise, basePrescription, historyLogs, normalizedUser);
+
+  return {
+    name: exerciseName,
+    sets: adjustment.sets,
+    rep_range: basePrescription.rep_range,
+    rest_range: basePrescription.rest_range,
+    effort: adjustment.effort,
     programming_focus: PROGRAMMING_STYLE_LABELS[goal] || "پیشروی پایه",
+    progression_state: adjustment.progression_state,
+    adjustment_note: adjustment.adjustment_note,
   };
 }
 
@@ -1265,7 +1324,7 @@ function chooseSplit({
   };
 }
 
-function buildRecommendedProgram(user) {
+function buildRecommendedProgram(user, logs = []) {
   const normalizedUser = normalizePersistedUser(user);
   const filteredPool = filterExercisesForUser(EXERCISES, normalizedUser);
   const split = chooseSplit({
@@ -1319,7 +1378,7 @@ function buildRecommendedProgram(user) {
     .map(day => ({
       ...day,
       prescriptions: day.exercises.map(exerciseName =>
-        buildExercisePrescription(exerciseName, normalizedUser, split.goal, split.frequency)
+        buildExercisePrescription(exerciseName, normalizedUser, split.goal, split.frequency, logs)
       ),
     }));
   return {
@@ -1335,7 +1394,7 @@ function buildRecommendedProgram(user) {
   };
 }
 
-function buildStaticProgram(program, user) {
+function buildStaticProgram(program, user, logs = []) {
   const normalizedUser = normalizePersistedUser(user);
   const filteredPool = filterExercisesForUser(EXERCISES, normalizedUser);
   const goalKey = program.goal_key || normalizeSplitGoal(program.goal);
@@ -1350,7 +1409,8 @@ function buildStaticProgram(program, user) {
         exerciseName,
         { ...normalizedUser, goal: GOAL_LABELS[goalKey] || normalizedUser.goal, training_level: LEVEL_LABELS[program.training_level] || normalizedUser.training_level },
         goalKey,
-        frequency
+        frequency,
+        logs
       )
     ),
   }));
@@ -1919,8 +1979,8 @@ function GymApp({ user, onLogout }) {
     (filterMuscle === "همه" || getExercisePrimaryMuscle(e) === filterMuscle) &&
     e.name.includes(searchEx)
   );
-  const recommendedProgram = buildRecommendedProgram(runtimeUser);
-  const staticPrograms = PROGRAMS.map(program => buildStaticProgram(program, runtimeUser));
+  const recommendedProgram = buildRecommendedProgram(runtimeUser, sortedWorkoutLog);
+  const staticPrograms = PROGRAMS.map(program => buildStaticProgram(program, runtimeUser, sortedWorkoutLog));
   const splitNoteLabels = {
     beginner_downgrade: "به‌خاطر سطح فعلی، split ساده‌تر انتخاب شد.",
     low_recovery_downgrade: "به‌خاطر ریکاوری پایین، ساختار سبک‌تر انتخاب شد.",
@@ -2540,6 +2600,11 @@ function GymApp({ user, onLogout }) {
                   نسخه پیشنهادی برای <strong>{activeExercisePrescription.name}</strong>:
                   {" "} {activeExercisePrescription.sets} ست · {activeExercisePrescription.rep_range} تکرار · استراحت {activeExercisePrescription.rest_range} · شدت {activeExercisePrescription.effort}
                   {activeExercisePrescription.programming_focus ? ` · ${activeExercisePrescription.programming_focus}` : ""}
+                  {activeExercisePrescription.adjustment_note && (
+                    <div style={{ marginTop: 8, color: dark ? "#c4dfff" : "#214b77" }}>
+                      {activeExercisePrescription.adjustment_note}
+                    </div>
+                  )}
                   {currentExerciseAdherence !== null && (
                     <>
                       <div style={{ marginTop: 8, color: dark ? "#b7d9ff" : "#214b77" }}>
@@ -2809,6 +2874,9 @@ function GymApp({ user, onLogout }) {
                         <div style={{ color: sub, fontSize: 12 }}>
                           {item.sets} ست · {item.rep_range} تکرار · استراحت {item.rest_range} · شدت {item.effort}
                         </div>
+                        {item.adjustment_note && (
+                          <div style={{ color: sub, fontSize: 11, marginTop: 4 }}>{item.adjustment_note}</div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2846,6 +2914,9 @@ function GymApp({ user, onLogout }) {
                           <div style={{ color: sub, fontSize: 12 }}>
                             {item.sets} ست · {item.rep_range} تکرار · استراحت {item.rest_range} · شدت {item.effort}
                           </div>
+                          {item.adjustment_note && (
+                            <div style={{ color: sub, fontSize: 11, marginTop: 4 }}>{item.adjustment_note}</div>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `ff3e0e9`
-- Commit message: `Reduce active compatibility label debt`
+- Latest implementation commit: `1b86286`
+- Commit message: `Remove exercise metadata legacy aliases`
 
 ---
 
@@ -48,6 +48,7 @@ The project now has:
 - the AI tab now visibly shows the active user/program/day context used for coaching prompts
 - a real browser runtime pass has now validated the main user loop end-to-end
 - active UI paths now rely less on legacy display aliases and more on normalized goal/level helpers
+- core exercise objects no longer carry legacy `muscle` / `level` aliases
 
 The project is now in:
 - implementation
@@ -423,10 +424,10 @@ Already reduced:
 - shared goal and level label maps exist
 - active UI display paths now use normalized goal/level helpers more consistently
 - write paths no longer store `goal_label` explicitly for new onboarding/signup flows
+- active exercise metadata objects no longer store legacy `muscle` and `level` fields
 
 Remaining compatibility debt is now mostly intentional and limited to:
 - legacy aliases preserved in `normalizePersistedUser(...)`
-- legacy aliases still present in some exercise objects
 - compatibility fields preserved where needed to avoid breaking older persisted state
 
 ### Runtime Verification Path

@@ -4,6 +4,7 @@ const USERS_KEY = "ironfа_users";
 const SESSION_KEY = "ironfa_session";
 const ACTIVE_PLAN_KEY = "ironfa_active_plan";
 const WORKOUT_LOG_KEY = "ironfa_workout_log";
+const ACTIVE_WORKOUT_KEY = "ironfa_active_workout";
 const PROGRESS_DATA_KEY = "ironfa_progress_data";
 
 function getUsers() {
@@ -40,6 +41,11 @@ function getPerUserData(key, userId, fallback) {
 function savePerUserData(key, userId, value) {
   const all = getPerUserStoredMap(key);
   all[userId] = value;
+  localStorage.setItem(key, JSON.stringify(all));
+}
+function clearPerUserData(key, userId) {
+  const all = getPerUserStoredMap(key);
+  delete all[userId];
   localStorage.setItem(key, JSON.stringify(all));
 }
 
@@ -1739,7 +1745,8 @@ function GymApp({ user, onLogout }) {
   const [searchEx, setSearchEx] = useState("");
   const [filterMuscle, setFilterMuscle] = useState("همه");
   const [selectedEx, setSelectedEx] = useState(null);
-  const [workoutLog, setWorkoutLog] = useState(() => sanitizeWorkoutLog(getPerUserData(WORKOUT_LOG_KEY, user.id, [])));
+  const [workoutHistory, setWorkoutHistory] = useState(() => sanitizeWorkoutLog(getPerUserData(WORKOUT_LOG_KEY, user.id, [])));
+  const [workoutLog, setWorkoutLog] = useState(() => sanitizeWorkoutLog(getPerUserData(ACTIVE_WORKOUT_KEY, user.id, [])));
   const [activeSet, setActiveSet] = useState({ name: "", weight: "", reps: "", sets: "" });
   const [logFeedback, setLogFeedback] = useState(null);
   const [restTimer, setRestTimer] = useState(0);
@@ -1770,7 +1777,8 @@ function GymApp({ user, onLogout }) {
 
   const levelInfo = getLevelInfo(gameData.xp);
   const xpProgress = ((gameData.xp - levelInfo.minXP) / (levelInfo.maxXP - levelInfo.minXP)) * 100;
-  const sortedWorkoutLog = [...workoutLog].sort((a, b) => (Number(b.created_at) || 0) - (Number(a.created_at) || 0));
+  const allWorkoutLogs = [...workoutLog, ...workoutHistory];
+  const sortedWorkoutLog = [...allWorkoutLogs].sort((a, b) => (Number(b.created_at) || 0) - (Number(a.created_at) || 0));
   const sessionKeyOf = (log) => log.created_at ? new Date(log.created_at).toDateString() : `${log.date}-${log.program_name || "free"}`;
   const uniqueSessionKeys = [...new Set(sortedWorkoutLog.map(sessionKeyOf))];
   const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
@@ -1938,8 +1946,12 @@ function GymApp({ user, onLogout }) {
   }, [logFeedback]);
 
   useEffect(() => {
-    savePerUserData(WORKOUT_LOG_KEY, user.id, sanitizeWorkoutLog(workoutLog));
+    savePerUserData(ACTIVE_WORKOUT_KEY, user.id, sanitizeWorkoutLog(workoutLog));
   }, [user.id, workoutLog]);
+
+  useEffect(() => {
+    savePerUserData(WORKOUT_LOG_KEY, user.id, sanitizeWorkoutLog(workoutHistory));
+  }, [user.id, workoutHistory]);
 
   useEffect(() => {
     savePerUserData(PROGRESS_DATA_KEY, user.id, sanitizeProgressData(progressData, defaultProgressData));
@@ -2094,6 +2106,7 @@ function GymApp({ user, onLogout }) {
 
     saveGameData(user.id, updatedGame);
     setGameData(updatedGame);
+    setWorkoutHistory(prev => [...workoutLog, ...prev]);
     setWorkoutPopup({
       xpEarned,
       newXP,
@@ -2116,6 +2129,7 @@ function GymApp({ user, onLogout }) {
       next_step: completionGuidance.message,
     });
     setWorkoutLog([]);
+    clearPerUserData(ACTIVE_WORKOUT_KEY, user.id);
     if (selectedProgram && nextDay) {
       setSelectedProgramDay(nextDayIndex);
       setActiveSet({ name: nextDay.exercises?.[0] || "", weight: "", reps: "", sets: "" });
@@ -2562,7 +2576,7 @@ function GymApp({ user, onLogout }) {
             {/* Log History */}
             {workoutLog.length > 0 && (
               <div>
-                <div style={{ fontWeight: 700, marginBottom: 8, color: sub }}>تمرین‌های ثبت‌شده امروز</div>
+                <div style={{ fontWeight: 700, marginBottom: 8, color: sub }}>ثبت‌های جلسه جاری</div>
                 {workoutLog.map(l => (
                   <div key={l.id} style={{ ...s.card, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, padding: "12px 16px" }}>
                     <div>

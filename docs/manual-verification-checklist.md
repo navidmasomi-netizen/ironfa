@@ -205,8 +205,24 @@ Use this section to record issues found during the pass:
 
 ### Runtime Checks Still To Execute
 
-- [ ] Real browser/runtime pass from onboarding into recommendation.
-- [ ] Real workout logging and completion pass with UI interaction.
-- [ ] Refresh/reload persistence pass during an active workout.
-- [ ] Post-completion restore pass with history/progress inspection.
+- [x] Real browser/runtime pass from onboarding into recommendation.
+- [x] Real workout logging and completion pass with UI interaction.
+- [x] Refresh/reload persistence pass during an active workout.
+- [x] Post-completion restore pass with history/progress inspection.
 - [x] AI tab runtime prompt/context sanity check.
+
+### Runtime Sections Confirmed In Browser
+
+- [x] Authentication and session flow
+- [x] Onboarding flow
+- [x] Recommendation and plan explanation
+- [x] Static programs
+- [x] Program activation and day flow
+- [x] Workout logging
+- [x] Prescription UX
+- [x] Progression guidance
+- [x] Workout completion popup and next-step behavior
+- [x] Persistence across refresh/reload
+- [x] Adaptive prescription visibility
+- [x] Progress tab
+- [x] AI tab

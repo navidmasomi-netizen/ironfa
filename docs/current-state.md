@@ -46,6 +46,7 @@ The project now has:
 - a local Vite runtime harness now exists for real browser verification
 - finishing a workout now also stops the active rest timer
 - the AI tab now visibly shows the active user/program/day context used for coaching prompts
+- a real browser runtime pass has now validated the main user loop end-to-end
 
 The project is now in:
 - implementation
@@ -432,6 +433,14 @@ Implemented:
 - local installable runtime dependencies
 - buildable runtime harness inside the repo
 - browser-openable local app URL for manual checklist execution
+- completed browser verification for:
+  - authentication and session
+  - onboarding
+  - recommendation and static programs
+  - workout logging and completion
+  - persistence and restore behavior
+  - progress tab
+  - AI tab
 
 ---
 

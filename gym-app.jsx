@@ -826,6 +826,18 @@ function getProgressionSuggestion(exercise, prescription, logs = []) {
   };
 }
 
+function getRecommendedRepsFromRange(repRange) {
+  const { min, max } = parseRepRange(repRange);
+  if (!min || !max) return "";
+  return String(min);
+}
+
+function getSuggestedRestSeconds(restRange) {
+  if (!restRange) return 90;
+  const match = String(restRange).match(/(\d+)/);
+  return match ? Number(match[1]) : 90;
+}
+
 function getPrescriptionRepRange(exercise, goal) {
   if (!exercise) return "8-12";
   if (goal === "hypertrophy") {
@@ -1662,9 +1674,10 @@ function GymApp({ user, onLogout }) {
   };
   const currentProgramDay = selectedProgram?.days?.[selectedProgramDay] || null;
   const currentProgramPrescriptions = currentProgramDay?.prescriptions || [];
-  const currentDayLoggedNames = currentProgramDay
-    ? workoutLog.filter(log => log.day_name === currentProgramDay.day).map(log => log.name)
+  const currentDayLogs = currentProgramDay
+    ? workoutLog.filter(log => log.day_name === currentProgramDay.day)
     : [];
+  const currentDayLoggedNames = currentDayLogs.map(log => log.name);
   const nextSuggestedExercise = currentProgramDay
     ? currentProgramDay.exercises.find(ex => !currentDayLoggedNames.includes(ex)) || null
     : null;
@@ -1676,6 +1689,36 @@ function GymApp({ user, onLogout }) {
     ? sortedWorkoutLog.filter(log => log.name === activeExercisePrescription.name).slice(0, 5)
     : [];
   const activeExerciseProgression = getProgressionSuggestion(activeExercise, activeExercisePrescription, activeExerciseHistory);
+  const currentExerciseLoggedSets = activeExercisePrescription
+    ? currentDayLogs
+        .filter(log => log.name === activeExercisePrescription.name)
+        .reduce((sum, log) => sum + (Number(log.sets) || 1), 0)
+    : 0;
+  const currentExerciseTargetSets = Number(activeExercisePrescription?.sets) || 0;
+  const currentExerciseRemainingSets = Math.max(0, currentExerciseTargetSets - currentExerciseLoggedSets);
+  const currentExerciseAdherence = currentExerciseTargetSets
+    ? Math.min(100, Math.round((currentExerciseLoggedSets / currentExerciseTargetSets) * 100))
+    : null;
+  const dayPrescriptionTargets = currentProgramPrescriptions.map(item => ({
+    name: item.name,
+    sets: Number(item.sets) || 0,
+  }));
+  const completedDayPrescriptionUnits = dayPrescriptionTargets.reduce((sum, target) => {
+    const loggedSets = currentDayLogs
+      .filter(log => log.name === target.name)
+      .reduce((acc, log) => acc + (Number(log.sets) || 1), 0);
+    return sum + Math.min(target.sets, loggedSets);
+  }, 0);
+  const totalDayPrescriptionUnits = dayPrescriptionTargets.reduce((sum, target) => sum + target.sets, 0);
+  const currentDayPrescriptionAdherence = totalDayPrescriptionUnits
+    ? Math.round((completedDayPrescriptionUnits / totalDayPrescriptionUnits) * 100)
+    : null;
+  const completedProgramDayExercises = currentProgramDay
+    ? currentProgramDay.exercises.filter(exerciseName => currentDayLoggedNames.includes(exerciseName)).length
+    : 0;
+  const remainingProgramDayExercises = currentProgramDay
+    ? Math.max(0, currentProgramDay.exercises.length - completedProgramDayExercises)
+    : 0;
   const currentWorkoutContext = selectedProgram ? {
     program_name: selectedProgram.name,
     day_name: currentProgramDay?.day || null,
@@ -1705,6 +1748,16 @@ function GymApp({ user, onLogout }) {
     setSelectedProgramDay(dayIndex);
     const firstExercise = selectedProgram?.days?.[dayIndex]?.exercises?.[0] || "";
     if (firstExercise) setActiveSet(s => ({ ...s, name: firstExercise }));
+  };
+  const applyPrescriptionToActiveSet = () => {
+    if (!activeExercisePrescription) return;
+    setActiveSet(s => ({
+      ...s,
+      name: activeExercisePrescription.name,
+      reps: getRecommendedRepsFromRange(activeExercisePrescription.rep_range),
+      sets: String(activeExercisePrescription.sets || ""),
+    }));
+    setRestDuration(getSuggestedRestSeconds(activeExercisePrescription.rest_range));
   };
 
   // Rest timer
@@ -2076,6 +2129,48 @@ function GymApp({ user, onLogout }) {
               </div>
             )}
 
+            {currentProgramDay && (
+              <div style={{ ...s.card, background: dark ? "#10161d" : "#f4fbff", border: "1px solid #2f6ea5" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontWeight: 800, marginBottom: 4 }}>وضعیت روز فعال</div>
+                    <div style={{ color: sub, fontSize: 12 }}>
+                      {completedProgramDayExercises} از {currentProgramDay.exercises.length} حرکت این روز حداقل یک ثبت دارند.
+                    </div>
+                  </div>
+                  {currentDayPrescriptionAdherence !== null && (
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{ color: sub, fontSize: 11, marginBottom: 2 }}>پایبندی امروز</div>
+                      <div style={{ color: accent, fontSize: 22, fontWeight: 900 }}>{currentDayPrescriptionAdherence}%</div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ height: 8, background: dark ? "#202a34" : "#d9ebf9", borderRadius: 999, overflow: "hidden", marginBottom: 10 }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${currentDayPrescriptionAdherence || 0}%`,
+                      background: currentDayPrescriptionAdherence >= 80 ? accent : "#6db7ff",
+                      borderRadius: 999,
+                      transition: "width 0.3s ease"
+                    }}
+                  />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                  {[
+                    { label: "ست هدف ثبت‌شده", value: totalDayPrescriptionUnits ? `${completedDayPrescriptionUnits}/${totalDayPrescriptionUnits}` : "بدون نسخه" },
+                    { label: "حرکت باقی‌مانده", value: remainingProgramDayExercises },
+                    { label: "حرکت بعدی", value: nextSuggestedExercise || "پایان روز" },
+                  ].map(item => (
+                    <div key={item.label} style={{ background: dark ? "#171f27" : "#fff", borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4 }}>{item.value}</div>
+                      <div style={{ color: sub, fontSize: 11 }}>{item.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Rest Timer */}
             <div style={{ ...s.card, textAlign: "center", background: restRunning ? (dark ? "#1a1100" : "#fffbea") : card }}>
               <div style={{ fontSize: 13, color: sub, marginBottom: 6 }}>تایمر استراحت</div>
@@ -2153,6 +2248,40 @@ function GymApp({ user, onLogout }) {
                   نسخه پیشنهادی برای <strong>{activeExercisePrescription.name}</strong>:
                   {" "} {activeExercisePrescription.sets} ست · {activeExercisePrescription.rep_range} تکرار · استراحت {activeExercisePrescription.rest_range} · شدت {activeExercisePrescription.effort}
                   {activeExercisePrescription.programming_focus ? ` · ${activeExercisePrescription.programming_focus}` : ""}
+                  {currentExerciseAdherence !== null && (
+                    <>
+                      <div style={{ marginTop: 8, color: dark ? "#b7d9ff" : "#214b77" }}>
+                        پیشرفت این حرکت: {currentExerciseLoggedSets}/{currentExerciseTargetSets} ست
+                        {currentExerciseRemainingSets > 0
+                          ? ` · ${currentExerciseRemainingSets} ست دیگر تا تکمیل نسخه`
+                          : " · نسخه این حرکت کامل شده"}
+                      </div>
+                      <div style={{ height: 6, background: dark ? "#243140" : "#d7e7f7", borderRadius: 999, overflow: "hidden", marginTop: 8 }}>
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${currentExerciseAdherence}%`,
+                            background: currentExerciseAdherence >= 100 ? accent : "#6db7ff",
+                            borderRadius: 999,
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                    <button
+                      style={{ ...s.btn("#2f6ea5"), color: "#fff", padding: "6px 10px", fontSize: 12 }}
+                      onClick={applyPrescriptionToActiveSet}
+                    >
+                      پر کردن فرم از نسخه
+                    </button>
+                    <button
+                      style={{ ...s.btn(dark ? "#243140" : "#d7e7f7"), color: dark ? "#e6f2ff" : "#214b77", padding: "6px 10px", fontSize: 12 }}
+                      onClick={() => setRestDuration(getSuggestedRestSeconds(activeExercisePrescription.rest_range))}
+                    >
+                      تنظیم تایمر طبق نسخه
+                    </button>
+                  </div>
                 </div>
               )}
               {activeExerciseProgression && (
@@ -2190,6 +2319,13 @@ function GymApp({ user, onLogout }) {
                 <input style={s.input} type="number" placeholder="تکرار" value={activeSet.reps} onChange={e => setActiveSet(s => ({ ...s, reps: e.target.value }))} />
                 <input style={s.input} type="number" placeholder="ست" value={activeSet.sets} onChange={e => setActiveSet(s => ({ ...s, sets: e.target.value }))} />
               </div>
+              {activeExercisePrescription && (
+                <div style={{ color: sub, fontSize: 12, marginBottom: 10, lineHeight: 1.8 }}>
+                  هدف سریع این حرکت:
+                  {" "} {activeExercisePrescription.sets} ست در بازه {activeExercisePrescription.rep_range}
+                  {activeExerciseProgression?.suggestedWeight ? ` · اگر فرم خوب بود ${activeExerciseProgression.suggestedWeight}kg را هم در نظر بگیر` : ""}
+                </div>
+              )}
               <button
                 style={{
                   ...s.btn(activeSet.name && activeSet.weight && activeSet.reps ? accent : (dark ? "#2a2a2a" : "#ddd")),

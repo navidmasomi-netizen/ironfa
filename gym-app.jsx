@@ -852,14 +852,32 @@ function getProgressionTrend(logs = []) {
 }
 
 function getProgressionSuggestion(exercise, prescription, logs = []) {
-  if (!exercise || !prescription || logs.length === 0) return null;
+  if (!exercise || !prescription) return null;
+  const { min, max } = parseRepRange(prescription.rep_range);
+  const targetSets = Number(prescription.sets) || 1;
+
+  if (logs.length === 0) {
+    if (!min || !max) return null;
+    return {
+      lastWeight: 0,
+      lastReps: 0,
+      lastSets: 0,
+      suggestedWeight: "",
+      suggestedReps: min,
+      suggestedSets: targetSets,
+      message: `برای اولین اجرای این حرکت، از بازه ${min}-${max} شروع کن و اول فرم تمیز و کامل بودن ست‌های هدف را تثبیت کن.`,
+      strategy: null,
+      trend_label: "baseline",
+      average_reps: null,
+      average_adherence: null,
+    };
+  }
   const latestLog = logs[0];
   const progressionType = exercise.progression_type || "load";
   const lastWeight = Number(latestLog.weight) || 0;
   const lastReps = Number(latestLog.reps) || 0;
   const lastSets = Number(latestLog.sets) || 1;
-  const { min, max } = parseRepRange(prescription.rep_range);
-  const targetSets = Number(prescription.sets) || lastSets;
+  const resolvedTargetSets = Number(prescription.sets) || lastSets;
   const trend = getProgressionTrend(logs);
 
   if (!min || !max) return null;
@@ -917,7 +935,7 @@ function getProgressionSuggestion(exercise, prescription, logs = []) {
     lastSets,
     suggestedWeight: suggestedWeight || "",
     suggestedReps: suggestedReps || "",
-    suggestedSets: targetSets,
+    suggestedSets: resolvedTargetSets,
     message,
     strategy,
     trend_label: trend.trendLabel,

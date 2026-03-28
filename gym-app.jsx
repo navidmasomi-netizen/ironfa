@@ -1013,6 +1013,126 @@ function getLongTermProgressionCycle(logs = []) {
   };
 }
 
+function getWeekBucketKey(log) {
+  const raw = Number(log?.created_at);
+  const date = raw ? new Date(raw) : new Date();
+  const copy = new Date(date);
+  const day = copy.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  copy.setDate(copy.getDate() + diff);
+  copy.setHours(0, 0, 0, 0);
+  return copy.toISOString().slice(0, 10);
+}
+
+function getLongTermVolumeManagement(logs = [], user, exercise) {
+  const historyLogs = logs.slice(0, 12);
+  if (historyLogs.length < 8) {
+    return {
+      state: "baseline",
+      averageRecentWeeklyVolume: 0,
+      averagePreviousWeeklyVolume: 0,
+      recentAdherence: null,
+      activeWeeks: 0,
+      note: null,
+    };
+  }
+
+  const normalizedUser = normalizePersistedUser(user);
+  const weeklyBuckets = historyLogs.reduce((acc, log) => {
+    const key = getWeekBucketKey(log);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(log);
+    return acc;
+  }, {});
+  const weeklySummaries = Object.entries(weeklyBuckets)
+    .map(([week, entries]) => ({
+      week,
+      volume: entries.reduce((sum, log) => sum + ((Number(log.weight) || 0) * (Number(log.reps) || 0) * (Number(log.sets) || 1)), 0),
+      adherence: entries
+        .map(log => {
+          const prescribedSets = Number(log.prescribed_sets) || 0;
+          const loggedSets = Number(log.sets) || 0;
+          return prescribedSets ? Math.min(1, loggedSets / prescribedSets) : null;
+        })
+        .filter(value => typeof value === "number"),
+    }))
+    .map(summary => ({
+      ...summary,
+      averageAdherence: summary.adherence.length
+        ? summary.adherence.reduce((sum, value) => sum + value, 0) / summary.adherence.length
+        : null,
+    }))
+    .sort((a, b) => b.week.localeCompare(a.week));
+
+  if (weeklySummaries.length < 3) {
+    return {
+      state: "baseline",
+      averageRecentWeeklyVolume: 0,
+      averagePreviousWeeklyVolume: 0,
+      recentAdherence: null,
+      activeWeeks: weeklySummaries.length,
+      note: null,
+    };
+  }
+
+  const recentWeeks = weeklySummaries.slice(0, 2);
+  const previousWeeks = weeklySummaries.slice(2, 4);
+  const averageRecentWeeklyVolume = Math.round(recentWeeks.reduce((sum, week) => sum + week.volume, 0) / recentWeeks.length);
+  const averagePreviousWeeklyVolume = previousWeeks.length
+    ? Math.round(previousWeeks.reduce((sum, week) => sum + week.volume, 0) / previousWeeks.length)
+    : 0;
+  const recentAdherenceSamples = recentWeeks
+    .map(week => week.averageAdherence)
+    .filter(value => typeof value === "number");
+  const recentAdherence = recentAdherenceSamples.length
+    ? recentAdherenceSamples.reduce((sum, value) => sum + value, 0) / recentAdherenceSamples.length
+    : null;
+
+  const volumeTrendUp = averagePreviousWeeklyVolume > 0 && averageRecentWeeklyVolume > averagePreviousWeeklyVolume * 1.18;
+  const volumeTrendDown = averagePreviousWeeklyVolume > 0 && averageRecentWeeklyVolume < averagePreviousWeeklyVolume * 0.88;
+  const highRecovery = normalizeSplitRecovery(normalizedUser.recovery_quality) === "high";
+  const goal = normalizeSplitGoal(normalizedUser.goal);
+  const canPushVolume = !exercise?.complexity || exercise.complexity !== "isolation";
+
+  if (volumeTrendUp && recentAdherence !== null && recentAdherence < 0.78) {
+    return {
+      state: "volume_guard",
+      averageRecentWeeklyVolume,
+      averagePreviousWeeklyVolume,
+      recentAdherence,
+      activeWeeks: weeklySummaries.length,
+      note: "در چند هفته اخیر حجم این حرکت سریع‌تر از کیفیت اجرا بالا رفته، پس app فعلاً حجم را کنترل می‌کند تا فشار مزمن جمع نشود.",
+    };
+  }
+
+  if (
+    canPushVolume &&
+    highRecovery &&
+    recentAdherence !== null &&
+    recentAdherence >= 0.88 &&
+    (goal === "hypertrophy" || goal === "recomposition") &&
+    (averagePreviousWeeklyVolume === 0 || volumeTrendDown || Math.abs(averageRecentWeeklyVolume - averagePreviousWeeklyVolume) <= averageRecentWeeklyVolume * 0.08)
+  ) {
+    return {
+      state: "volume_push",
+      averageRecentWeeklyVolume,
+      averagePreviousWeeklyVolume,
+      recentAdherence,
+      activeWeeks: weeklySummaries.length,
+      note: "چند هفته اخیر حجم این حرکت پایدار مانده و ریکاوری/پایبندی خوب بوده، پس app کمی فضای رشد حجمی بیشتری می‌دهد.",
+    };
+  }
+
+  return {
+    state: "baseline",
+    averageRecentWeeklyVolume,
+    averagePreviousWeeklyVolume,
+    recentAdherence,
+    activeWeeks: weeklySummaries.length,
+    note: null,
+  };
+}
+
 function getTrendDirection(currentValue, previousValue, epsilon = 0.01) {
   if (typeof currentValue !== "number" || typeof previousValue !== "number") return "neutral";
   if (currentValue > previousValue + epsilon) return "up";
@@ -1580,6 +1700,7 @@ function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = []
   const normalizedUser = normalizePersistedUser(user);
   const trend = getProgressionTrend(logs);
   const cycle = getLongTermProgressionCycle(logs);
+  const volumeManagement = getLongTermVolumeManagement(logs, normalizedUser, exercise);
   const isIsolation = exercise.complexity === "isolation";
   const minSets = isIsolation ? 2 : 3;
   let sets = Number(prescription.sets) || minSets;
@@ -1668,6 +1789,30 @@ function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = []
     adjustment_note = "چرخه اخیر این حرکت به reset نیاز دارد، پس نسخه فعلاً کمی سبک‌تر شده تا از نو با کیفیت خوب جلو برود.";
   }
 
+  if (volumeManagement.state === "volume_guard" && !["deload", "cycle_reset"].includes(progression_state)) {
+    sets = Math.max(minSets, sets - 1);
+    if (restRange.min && restRange.max) {
+      rest_range = formatRestRange(restRange.min + 15, restRange.max + 15, rest_range);
+    }
+    if (repRange.min && repRange.max && repRange.max - repRange.min >= 2) {
+      rep_range = formatRepRange(repRange.min, repRange.max - 1, rep_range);
+    }
+    effort = "3-4 RIR";
+    progression_state = "volume_guard";
+    adjustment_note = volumeManagement.note;
+  } else if (
+    volumeManagement.state === "volume_push" &&
+    ["baseline", "accumulate", "progress"].includes(progression_state) &&
+    sets < (isIsolation ? 4 : 5)
+  ) {
+    sets += 1;
+    if (repRange.min && repRange.max && normalizeSplitGoal(normalizedUser.goal) !== "strength" && repRange.max < 20) {
+      rep_range = formatRepRange(repRange.min + 1, repRange.max + 1, rep_range);
+    }
+    progression_state = "volume_push";
+    adjustment_note = volumeManagement.note;
+  }
+
   return {
     sets,
     rep_range,
@@ -1677,6 +1822,9 @@ function getHistoryAwarePrescriptionAdjustment(exercise, prescription, logs = []
     adjustment_note,
     cycle_phase: cycle.phase,
     cycle_blocks: cycle.completedBlocks,
+    volume_management_state: volumeManagement.state,
+    average_recent_weekly_volume: volumeManagement.averageRecentWeeklyVolume,
+    average_previous_weekly_volume: volumeManagement.averagePreviousWeeklyVolume,
   };
 }
 
@@ -1695,7 +1843,8 @@ function buildExercisePrescription(exerciseName, user, goalOverride, frequencyOv
     effort: getPrescriptionEffort(goal, trainingLevel),
   };
   const historyLogs = logs.filter(log => log.name === exerciseName).slice(0, 5);
-  const adjustment = getHistoryAwarePrescriptionAdjustment(exercise, basePrescription, historyLogs, normalizedUser);
+  const longHistoryLogs = logs.filter(log => log.name === exerciseName).slice(0, 12);
+  const adjustment = getHistoryAwarePrescriptionAdjustment(exercise, basePrescription, longHistoryLogs, normalizedUser);
 
   return {
     name: exerciseName,
@@ -1708,6 +1857,9 @@ function buildExercisePrescription(exerciseName, user, goalOverride, frequencyOv
     adjustment_note: adjustment.adjustment_note,
     cycle_phase: adjustment.cycle_phase,
     cycle_blocks: adjustment.cycle_blocks,
+    volume_management_state: adjustment.volume_management_state,
+    average_recent_weekly_volume: adjustment.average_recent_weekly_volume,
+    average_previous_weekly_volume: adjustment.average_previous_weekly_volume,
   };
 }
 

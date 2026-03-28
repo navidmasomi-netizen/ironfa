@@ -60,6 +60,7 @@ The project now has:
 - canonical user normalization now keeps persisted legacy reads at the boundary while returning a cleaner runtime user shape
 - active runtime paths no longer rely on leftover `level` / `gender` / `workoutDays` / `sessionLength` / `program.level` style aliases
 - prescription logic now also manages training volume across multiple weeks, not only short-horizon history
+- a broader bug sweep across the latest adaptive, AI, progress, and persistence waves did not reveal a new blocking regression
 - release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
 - a final release regression checklist now exists for release-candidate gating
 - the final release regression checklist is now closed and the current build is considered acceptable as a release candidate

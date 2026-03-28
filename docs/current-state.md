@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `9464a39`
-- Commit message: `Remove remaining active compatibility aliases`
+- Latest implementation commit: `16ca079`
+- Commit message: `Add long-term volume management rules`
 
 ---
 
@@ -59,6 +59,7 @@ The project now has:
 - the AI tab now switches into more conservative safety modes when the user profile or question suggests pain, injury, or limitations
 - canonical user normalization now keeps persisted legacy reads at the boundary while returning a cleaner runtime user shape
 - active runtime paths no longer rely on leftover `level` / `gender` / `workoutDays` / `sessionLength` / `program.level` style aliases
+- prescription logic now also manages training volume across multiple weeks, not only short-horizon history
 - release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
 - a final release regression checklist now exists for release-candidate gating
 - the final release regression checklist is now closed and the current build is considered acceptable as a release candidate
@@ -618,7 +619,6 @@ Stable enough:
 - trust/disclaimer baseline
 
 Not yet fully hardened:
-- deeper volume-management rules across many weeks
 - richer explanation of why specific exercises were chosen inside exercise-level selection too
 - perfect app-wide normalization
 - full test/runtime verification

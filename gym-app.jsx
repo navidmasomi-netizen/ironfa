@@ -766,6 +766,66 @@ function getExerciseByName(name) {
   return EXERCISES.find(ex => ex.name === name) || null;
 }
 
+function parseRepRange(repRange) {
+  if (!repRange) return { min: null, max: null };
+  const match = String(repRange).match(/(\d+)\s*-\s*(\d+)/);
+  if (!match) return { min: null, max: null };
+  return { min: Number(match[1]), max: Number(match[2]) };
+}
+
+function getProgressionSuggestion(exercise, prescription, logs = []) {
+  if (!exercise || !prescription || logs.length === 0) return null;
+  const latestLog = logs[0];
+  const progressionType = exercise.progression_type || "load";
+  const lastWeight = Number(latestLog.weight) || 0;
+  const lastReps = Number(latestLog.reps) || 0;
+  const lastSets = Number(latestLog.sets) || 1;
+  const { min, max } = parseRepRange(prescription.rep_range);
+  const targetSets = Number(prescription.sets) || lastSets;
+
+  if (!min || !max) return null;
+
+  let suggestedWeight = lastWeight;
+  let suggestedReps = lastReps || min;
+  let message = `آخرین ثبت: ${lastWeight || "بدون وزن"}kg × ${lastReps} تکرار × ${lastSets} ست`;
+
+  if (progressionType === "reps_then_load") {
+    if (lastReps >= max && lastWeight > 0) {
+      suggestedWeight = Number((lastWeight + 2.5).toFixed(1));
+      suggestedReps = min;
+      message = `آخرین ست به سقف بازه رسید. جلسه بعد ${suggestedWeight}kg را با ${min}-${max} تکرار شروع کن.`;
+    } else {
+      suggestedReps = Math.min(max, Math.max(min, lastReps + 1));
+      message = `اولویت جلسه بعد: با ${lastWeight || "وزن فعلی"}kg یک تکرار بیشتر بزن و به بازه ${min}-${max} نزدیک شو.`;
+    }
+  } else if (progressionType === "reps") {
+    suggestedReps = Math.min(max, Math.max(min, lastReps + 1));
+    message = `برای جلسه بعد روی ${suggestedReps} تکرار با فرم تمیز تمرکز کن.`;
+  } else if (progressionType === "time") {
+    suggestedReps = Math.min(max, Math.max(min, lastReps + 5));
+    message = `برای جلسه بعد کمی زمان/تکرار را بالا ببر و فرم را حفظ کن.`;
+  } else {
+    if (lastReps >= max && lastWeight > 0) {
+      suggestedWeight = Number((lastWeight + 2.5).toFixed(1));
+      suggestedReps = min;
+      message = `آخرین ثبت خوب بود. جلسه بعد ${suggestedWeight}kg را در بازه ${min}-${max} هدف بگیر.`;
+    } else {
+      suggestedReps = Math.min(max, Math.max(min, lastReps + 1));
+      message = `قبل از افزایش وزنه، همین وزنه را در بازه ${min}-${max} کامل‌تر کن.`;
+    }
+  }
+
+  return {
+    lastWeight,
+    lastReps,
+    lastSets,
+    suggestedWeight: suggestedWeight || "",
+    suggestedReps: suggestedReps || "",
+    suggestedSets: targetSets,
+    message,
+  };
+}
+
 function getPrescriptionRepRange(exercise, goal) {
   if (!exercise) return "8-12";
   if (goal === "hypertrophy") {
@@ -1611,6 +1671,11 @@ function GymApp({ user, onLogout }) {
   const activeExercisePrescription = currentProgramPrescriptions.find(item => item.name === activeSet.name)
     || currentProgramPrescriptions[0]
     || null;
+  const activeExercise = activeExercisePrescription ? getExerciseByName(activeExercisePrescription.name) : null;
+  const activeExerciseHistory = activeExercisePrescription
+    ? sortedWorkoutLog.filter(log => log.name === activeExercisePrescription.name).slice(0, 5)
+    : [];
+  const activeExerciseProgression = getProgressionSuggestion(activeExercise, activeExercisePrescription, activeExerciseHistory);
   const currentWorkoutContext = selectedProgram ? {
     program_name: selectedProgram.name,
     day_name: currentProgramDay?.day || null,
@@ -2088,6 +2153,32 @@ function GymApp({ user, onLogout }) {
                   نسخه پیشنهادی برای <strong>{activeExercisePrescription.name}</strong>:
                   {" "} {activeExercisePrescription.sets} ست · {activeExercisePrescription.rep_range} تکرار · استراحت {activeExercisePrescription.rest_range} · شدت {activeExercisePrescription.effort}
                   {activeExercisePrescription.programming_focus ? ` · ${activeExercisePrescription.programming_focus}` : ""}
+                </div>
+              )}
+              {activeExerciseProgression && (
+                <div style={{
+                  background: dark ? "#16151f" : "#f6f1ff",
+                  border: "1px solid #6d4cc2",
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  marginBottom: 10,
+                  fontSize: 12,
+                  color: dark ? "#e7ddff" : "#4d347d"
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>پیشنهاد پیشروی جلسه بعد</div>
+                  <div style={{ marginBottom: 8 }}>{activeExerciseProgression.message}</div>
+                  <button
+                    style={{ ...s.btn("#6d4cc2"), color: "#fff", padding: "6px 10px", fontSize: 12 }}
+                    onClick={() => setActiveSet(s => ({
+                      ...s,
+                      name: activeExercisePrescription.name,
+                      weight: String(activeExerciseProgression.suggestedWeight || ""),
+                      reps: String(activeExerciseProgression.suggestedReps || ""),
+                      sets: String(activeExerciseProgression.suggestedSets || ""),
+                    }))}
+                  >
+                    استفاده از پیشنهاد
+                  </button>
                 </div>
               )}
               <select style={{ ...s.input, marginBottom: 8 }} value={activeSet.name} onChange={e => setActiveSet(s => ({ ...s, name: e.target.value }))}>

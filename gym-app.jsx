@@ -1926,6 +1926,7 @@ function GymApp({ user, onLogout }) {
   const xpProgress = ((gameData.xp - levelInfo.minXP) / (levelInfo.maxXP - levelInfo.minXP)) * 100;
   const allWorkoutLogs = [...workoutLog, ...workoutHistory];
   const sortedWorkoutLog = [...allWorkoutLogs].sort((a, b) => (Number(b.created_at) || 0) - (Number(a.created_at) || 0));
+  const sortedWorkoutHistory = [...workoutHistory].sort((a, b) => (Number(b.created_at) || 0) - (Number(a.created_at) || 0));
   const sessionKeyOf = (log) => log.created_at ? new Date(log.created_at).toDateString() : `${log.date}-${log.program_name || "free"}`;
   const uniqueSessionKeys = [...new Set(sortedWorkoutLog.map(sessionKeyOf))];
   const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
@@ -1979,8 +1980,8 @@ function GymApp({ user, onLogout }) {
     (filterMuscle === "همه" || getExercisePrimaryMuscle(e) === filterMuscle) &&
     e.name.includes(searchEx)
   );
-  const recommendedProgram = buildRecommendedProgram(runtimeUser, sortedWorkoutLog);
-  const staticPrograms = PROGRAMS.map(program => buildStaticProgram(program, runtimeUser, sortedWorkoutLog));
+  const recommendedProgram = buildRecommendedProgram(runtimeUser, sortedWorkoutHistory);
+  const staticPrograms = PROGRAMS.map(program => buildStaticProgram(program, runtimeUser, sortedWorkoutHistory));
   const splitNoteLabels = {
     beginner_downgrade: "به‌خاطر سطح فعلی، split ساده‌تر انتخاب شد.",
     low_recovery_downgrade: "به‌خاطر ریکاوری پایین، ساختار سبک‌تر انتخاب شد.",

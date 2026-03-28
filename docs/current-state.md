@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `f61db06`
-- Commit message: `Harden AI safety around limitations`
+- Latest implementation commit: `82723bd`
+- Commit message: `Tighten canonical user normalization`
 
 ---
 
@@ -57,6 +57,7 @@ The project now has:
 - the progress tab now also summarizes trend direction for adherence, session volume, and weekly cadence instead of only showing raw stats
 - the progress tab now also interprets those trends differently for hypertrophy, strength, fat loss, and recomposition
 - the AI tab now switches into more conservative safety modes when the user profile or question suggests pain, injury, or limitations
+- canonical user normalization now keeps persisted legacy reads at the boundary while returning a cleaner runtime user shape
 - release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
 - a final release regression checklist now exists for release-candidate gating
 
@@ -608,6 +609,7 @@ Stable enough:
 - richer trend analysis inside the progress tab
 - goal-specific progress interpretation inside the progress tab
 - limitation-aware AI safety shaping in both prompt construction and visible UI state
+- tighter canonical normalization for persisted user data
 - normalized runtime user approach
 - trust/disclaimer baseline
 
@@ -640,10 +642,10 @@ These should not be reopened without a strong reason.
 The most logical next work items are:
 
 1. turn progression guidance into actual auto-updating prescription behavior over time
-2. reduce remaining compatibility debt
-3. keep hardening the current loop with runtime verification
-4. connect explainability more directly to long-cycle auto-adjustments over time
-5. strengthen release-candidate regression confidence
+2. keep hardening the current loop with runtime verification
+3. connect explainability more directly to long-cycle auto-adjustments over time
+4. strengthen release-candidate regression confidence
+5. continue trimming compatibility debt only where it still matters at runtime
 
 ---
 
@@ -656,9 +658,9 @@ Recommended next focus:
 - keep working from `/Users/user/Desktop/Gym App/gym-app.jsx`
 
 If continuing from the current momentum, the best next topic is:
-- deeper compatibility cleanup
-or
 - runtime verification of the current adaptive loop
+or
+- release-candidate confidence tightening
 
 ---
 

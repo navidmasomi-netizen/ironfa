@@ -2126,7 +2126,12 @@ function GymApp({ user, onLogout }) {
       : userFilteredExercises.map(ex => ex.name);
     if (!validExerciseNames.length) return;
     if (activeSet.name && validExerciseNames.includes(activeSet.name)) return;
-    setActiveSet(s => ({ ...s, name: validExerciseNames[0] || "" }));
+    setActiveSet({
+      name: validExerciseNames[0] || "",
+      weight: "",
+      reps: "",
+      sets: "",
+    });
   }, [activeSet.name, currentProgramDay, userFilteredExercises]);
 
   useEffect(() => {

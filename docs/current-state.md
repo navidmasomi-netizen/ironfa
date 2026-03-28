@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `92d5a69`
-- Commit message: `Record progression spot-check results`
+- Latest implementation commit: `aab4d63`
+- Commit message: `Tighten release QA and fix logout style warning`
 
 ---
 
@@ -52,6 +52,7 @@ The project now has:
 - adaptive prescriptions now adjust rep range and rest range, not only sets and effort
 - progression now includes plateau reset and deload-aware rules
 - browser spot-check confirmed new adaptive copy in the programs tab and progression labels in the workout tab
+- release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
 
 The project is now in:
 - implementation

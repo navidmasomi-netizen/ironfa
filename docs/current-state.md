@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `369f204`
-- Commit message: `Improve workout completion guidance from adherence`
+- Latest implementation commit: `68d668d`
+- Commit message: `Make progression guidance history-aware`
 
 ---
 
@@ -31,6 +31,7 @@ The project now has:
 - progression-aware workout guidance based on movement history
 - polished workout-screen guidance around prescription and adherence
 - completion guidance that changes based on adherence quality
+- history-aware progression guidance based on multiple recent sessions
 
 The project is now in:
 - implementation
@@ -229,6 +230,7 @@ Prescription layer currently generates:
 It now also supports:
 - history-based progression hints for the active exercise
 - simple next-session weight or rep suggestions
+- trend-aware suggestions that can hold, consolidate, or progress based on recent sessions
 
 ### H. Workout Flow Backbone
 The workout flow is now program-aware and day-aware.
@@ -247,6 +249,8 @@ Implemented:
 - one-click autofill from the active prescription
 - one-click timer setup from the active prescription
 - quick per-movement progress display against target sets
+- visible progression strategy labels for the active movement
+- recent adherence and rep averages inside the progression block
 
 ### I. Logging Interaction Baseline
 Logging is no longer a raw form only.
@@ -364,10 +368,10 @@ These are active enough to be considered real implemented baselines:
 - progression-aware workout guidance
 - workout-screen prescription/adherence polish
 - adherence-aware completion guidance
+- history-aware progression guidance
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:
-- deeper progression logic beyond the current hint layer
 - deeper volume auto-adjustment
 - full plan explanation layer
 - full removal of all legacy aliases
@@ -404,7 +408,7 @@ Implemented:
 
 This means programs are no longer only split + exercise names. They now carry baseline training prescriptions.
 
-The workout layer now also uses recent history to suggest the next session target for the active movement.
+The workout layer now also uses recent history to suggest the next session target for the active movement, and can hold or consolidate instead of always pushing progression.
 
 ---
 
@@ -424,11 +428,12 @@ The current MVP backbone now looks like this:
 10. app shows save feedback
 11. app measures day coverage and prescription adherence
 12. app suggests the next progression target for the active exercise
-13. workout screen shows active-day adherence, remaining work, and prescription actions
-14. user completes workout
-15. app shows session summary and adherence-aware next-step guidance
-16. progress and logs persist across sessions
-17. progress tab reflects adherence and session-level progress
+13. app checks recent movement history before deciding whether to push, hold, or consolidate
+14. workout screen shows active-day adherence, remaining work, and prescription actions
+15. user completes workout
+16. app shows session summary and adherence-aware next-step guidance
+17. progress and logs persist across sessions
+18. progress tab reflects adherence and session-level progress
 
 This is the strongest implemented loop so far.
 
@@ -446,6 +451,7 @@ Stable enough:
 - completion popup summary
 - adherence tracking
 - progression-aware workout guidance
+- history-aware progression logic
 - workout-screen prescription guidance
 - adherence-aware completion feedback
 - persistence for key loop data
@@ -482,11 +488,11 @@ These should not be reopened without a strong reason.
 
 The most logical next work items are:
 
-1. add progression-aware updates over time
+1. turn progression guidance into actual auto-updating prescription behavior over time
 2. connect progress history more strongly to goal-specific outcomes
 3. reduce remaining compatibility debt
 4. keep hardening the current loop with runtime verification
-5. improve explanation of why the plan is progressing or being held back
+5. improve explanation of why the plan is progressing, holding, or consolidating
 
 ---
 

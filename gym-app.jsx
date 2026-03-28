@@ -2064,13 +2064,15 @@ function GymApp({ user, onLogout }) {
     setSelectedProgram(program);
     setSelectedProgramDay(0);
     const firstExercise = program.days?.[0]?.exercises?.[0] || "";
-    setActiveSet(s => ({ ...s, name: firstExercise }));
+    setActiveSet({ name: firstExercise, weight: "", reps: "", sets: "" });
     setTab("workout");
   };
   const selectProgramDay = (dayIndex) => {
+    setLogFeedback(null);
+    stopRest();
     setSelectedProgramDay(dayIndex);
     const firstExercise = selectedProgram?.days?.[dayIndex]?.exercises?.[0] || "";
-    if (firstExercise) setActiveSet(s => ({ ...s, name: firstExercise }));
+    if (firstExercise) setActiveSet({ name: firstExercise, weight: "", reps: "", sets: "" });
   };
   const applyPrescriptionToActiveSet = () => {
     if (!activeExercisePrescription) return;

@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `1f74159`
-- Commit message: `Use completed history in progress stats`
+- Latest implementation commit: `213c852`
+- Commit message: `Reset stale workout form on selection fallback`
 
 ---
 
@@ -42,6 +42,7 @@ The project now has:
 - invalid weight entries are blocked in the progress tab
 - switching programs or days now resets the active workout form so stale values do not leak into a new context
 - progress tab stats now read only completed workout history, not the active workout draft
+- invalid restored or stale exercise selections now reset the active workout form instead of carrying old values
 
 The project is now in:
 - implementation
@@ -314,6 +315,7 @@ Implemented:
 - sanitize persisted progress entries
 - clamp invalid selected program day back into a valid range
 - auto-correct active exercise if the current selection is no longer valid
+- reset the active workout form when selection fallback chooses a new valid exercise
 - prevent invalid log entries with non-positive weight or reps
 - prevent invalid weight progress entries with non-positive or non-numeric values
 - protect progress chart calculations when progress data is empty
@@ -440,6 +442,7 @@ These are active enough to be considered real implemented baselines:
 - safer progress weight entry validation
 - safer program/day switching without stale form carry-over
 - progress analytics now align with completed-history-only persistence
+- safer restore fallback when the current exercise selection becomes stale
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:

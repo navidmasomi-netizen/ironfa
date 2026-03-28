@@ -103,15 +103,16 @@ Its purpose is to re-check the core loop after the latest implementation, harden
 - [x] No blocking runtime error appears during the main loop.
 - [x] No major persistence regression appears.
 - [x] No obvious UI break appears in the main surfaces.
-- [ ] The current build is acceptable as a release candidate.
+- [x] The current build is acceptable as a release candidate.
 
 ---
 
 ## Notes
 
-- [ ] No new issues found
+- [x] No new issues found
 - [x] Issues recorded separately
 
 - Progression states `افزایش وزنه`, `افزایش تکرار`, `تثبیت اجرا`, and `نگه‌داشتن بار` were confirmed in the browser.
 - Adaptive prescription note rendering was confirmed in the programs tab.
 - Plateau/deload states were deterministically triggered and confirmed in the workout tab through the local progression test controls.
+- The current residual risk is limited to future waves introducing new regressions; no blocking release issue is currently open in the verified loop.

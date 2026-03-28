@@ -61,11 +61,13 @@ The project now has:
 - active runtime paths no longer rely on leftover `level` / `gender` / `workoutDays` / `sessionLength` / `program.level` style aliases
 - release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
 - a final release regression checklist now exists for release-candidate gating
+- the final release regression checklist is now closed and the current build is considered acceptable as a release candidate
 
 The project is now in:
 - implementation
 - hardening
 - checkpointed iteration
+- release-candidate-ready baseline
 
 ---
 
@@ -646,8 +648,8 @@ The most logical next work items are:
 1. turn progression guidance into actual auto-updating prescription behavior over time
 2. keep hardening the current loop with runtime verification
 3. connect explainability more directly to long-cycle auto-adjustments over time
-4. strengthen release-candidate regression confidence
-5. keep compatibility cleanup limited to safe persistence-boundary migration work
+4. keep compatibility cleanup limited to safe persistence-boundary migration work
+5. open the next feature wave only if it clearly justifies another regression pass
 
 ---
 
@@ -662,7 +664,7 @@ Recommended next focus:
 If continuing from the current momentum, the best next topic is:
 - runtime verification of the current adaptive loop
 or
-- release-candidate confidence tightening
+- the next intentional feature wave after release-candidate sign-off
 
 ---
 

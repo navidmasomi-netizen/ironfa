@@ -30,10 +30,10 @@ Its purpose is to reduce release risk without opening a new feature wave.
 
 ## 4. Core Loop Sanity
 
-- [ ] Confirm onboarding still reaches the main app.
-- [ ] Confirm recommendation still renders after the latest progression changes.
-- [ ] Confirm workout logging still works after the latest progression changes.
-- [ ] Confirm completion popup still works after the latest progression changes.
+- [x] Confirm onboarding still reaches the main app.
+- [x] Confirm recommendation still renders after the latest progression changes.
+- [x] Confirm workout logging still works after the latest progression changes.
+- [x] Confirm completion popup still works after the latest progression changes.
 
 ---
 
@@ -47,8 +47,8 @@ Its purpose is to reduce release risk without opening a new feature wave.
 
 ## 6. Persistence and Restore
 
-- [ ] Confirm refresh/reload behavior still restores active plan and workout draft correctly.
-- [ ] Confirm completed history remains separate from active workout draft.
+- [x] Confirm refresh/reload behavior still restores active plan and workout draft correctly.
+- [x] Confirm completed history remains separate from active workout draft.
 
 ---
 
@@ -56,12 +56,13 @@ Its purpose is to reduce release risk without opening a new feature wave.
 
 Record any remaining release-facing risks here:
 
-- [ ] Snapshot lag
-- [ ] Runtime harness mismatch
-- [ ] Progression copy mismatch
-- [ ] Restore/persistence regression
+- [x] Snapshot lag
+- [x] Runtime harness mismatch
+- [x] Progression copy mismatch
+- [x] Restore/persistence regression
 - [x] No new issues found
 
 ## Notes
 
 - A console warning about mixing `border` and `borderColor` in the logout button was found during runtime QA and fixed.
+- The remaining unchecked QA-tightening items were covered by the later manual regression pass and the deterministic progression test controls.

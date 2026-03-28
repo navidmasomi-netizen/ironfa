@@ -9,22 +9,22 @@ Its purpose is to reduce release risk without opening a new feature wave.
 
 ## 1. Snapshot Alignment
 
-- [ ] Confirm `docs/current-state.md` reflects the latest implementation checkpoint.
-- [ ] Confirm the latest verification and progression commits are represented in the project snapshot.
+- [x] Confirm `docs/current-state.md` reflects the latest implementation checkpoint.
+- [x] Confirm the latest verification and progression commits are represented in the project snapshot.
 
 ---
 
 ## 2. Git Cleanliness
 
-- [ ] Confirm no intended product changes remain uncommitted.
-- [ ] Confirm unrelated files are still excluded from product commits.
+- [x] Confirm no intended product changes remain uncommitted.
+- [x] Confirm unrelated files are still excluded from product commits.
 
 ---
 
 ## 3. Runtime Entry
 
-- [ ] Confirm the local runtime harness still builds successfully.
-- [ ] Confirm the dev server can still start from the repo workspace.
+- [x] Confirm the local runtime harness still builds successfully.
+- [x] Confirm the dev server can still start from the repo workspace.
 
 ---
 
@@ -39,9 +39,9 @@ Its purpose is to reduce release risk without opening a new feature wave.
 
 ## 5. Progression and Adaptive Behavior
 
-- [ ] Confirm progression labels still render correctly after plateau/deload updates.
-- [ ] Confirm adaptive prescription notes still render correctly in the programs tab.
-- [ ] Confirm no obvious copy mismatch exists between progression state and prescription adjustment note.
+- [x] Confirm progression labels still render correctly after plateau/deload updates.
+- [x] Confirm adaptive prescription notes still render correctly in the programs tab.
+- [x] Confirm no obvious copy mismatch exists between progression state and prescription adjustment note.
 
 ---
 
@@ -60,4 +60,8 @@ Record any remaining release-facing risks here:
 - [ ] Runtime harness mismatch
 - [ ] Progression copy mismatch
 - [ ] Restore/persistence regression
-- [ ] No new issues found
+- [x] No new issues found
+
+## Notes
+
+- A console warning about mixing `border` and `borderColor` in the logout button was found during runtime QA and fixed.

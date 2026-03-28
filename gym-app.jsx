@@ -2532,7 +2532,7 @@ function GymApp({ user, onLogout }) {
         <div style={s.row}>
           <span style={{ color: "#ff6600", fontWeight: 700, fontSize: 13 }}>🔥{gameData.streak}</span>
           <button style={s.darkBtn} onClick={() => setDark(d => !d)}>{dark ? "☀️" : "🌙"}</button>
-          <button style={{ ...s.darkBtn, color: "#ff6b6b", borderColor: "#5a1a1a" }} onClick={onLogout}>خروج</button>
+          <button style={{ ...s.darkBtn, color: "#ff6b6b", border: "1px solid #5a1a1a" }} onClick={onLogout}>خروج</button>
         </div>
       </div>
 

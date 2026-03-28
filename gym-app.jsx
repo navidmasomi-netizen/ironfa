@@ -773,6 +773,51 @@ function parseRepRange(repRange) {
   return { min: Number(match[1]), max: Number(match[2]) };
 }
 
+function getProgressionTrend(logs = []) {
+  if (!logs.length) {
+    return {
+      averageReps: 0,
+      averageAdherence: null,
+      recentConsistency: 0,
+      stalled: false,
+      needsConsolidation: false,
+      trendLabel: "no_data",
+    };
+  }
+
+  const recentLogs = logs.slice(0, 3);
+  const averageReps = recentLogs.reduce((sum, log) => sum + (Number(log.reps) || 0), 0) / recentLogs.length;
+  const adherenceSamples = recentLogs
+    .map(log => {
+      const prescribedSets = Number(log.prescribed_sets) || 0;
+      const loggedSets = Number(log.sets) || 0;
+      return prescribedSets ? Math.min(1, loggedSets / prescribedSets) : null;
+    })
+    .filter(value => typeof value === "number");
+  const averageAdherence = adherenceSamples.length
+    ? adherenceSamples.reduce((sum, value) => sum + value, 0) / adherenceSamples.length
+    : null;
+  const recentConsistency = recentLogs.filter(log => (Number(log.reps) || 0) > 0).length / recentLogs.length;
+  const latestReps = Number(recentLogs[0]?.reps) || 0;
+  const previousBestReps = Math.max(...recentLogs.slice(1).map(log => Number(log.reps) || 0), 0);
+  const stalled = recentLogs.length >= 2 && latestReps <= previousBestReps;
+  const needsConsolidation = averageAdherence !== null && averageAdherence < 0.7;
+
+  let trendLabel = "stable";
+  if (needsConsolidation) trendLabel = "consolidate";
+  else if (!stalled && latestReps > previousBestReps) trendLabel = "advancing";
+  else if (stalled) trendLabel = "stalled";
+
+  return {
+    averageReps,
+    averageAdherence,
+    recentConsistency,
+    stalled,
+    needsConsolidation,
+    trendLabel,
+  };
+}
+
 function getProgressionSuggestion(exercise, prescription, logs = []) {
   if (!exercise || !prescription || logs.length === 0) return null;
   const latestLog = logs[0];
@@ -782,35 +827,53 @@ function getProgressionSuggestion(exercise, prescription, logs = []) {
   const lastSets = Number(latestLog.sets) || 1;
   const { min, max } = parseRepRange(prescription.rep_range);
   const targetSets = Number(prescription.sets) || lastSets;
+  const trend = getProgressionTrend(logs);
 
   if (!min || !max) return null;
 
   let suggestedWeight = lastWeight;
   let suggestedReps = lastReps || min;
   let message = `آخرین ثبت: ${lastWeight || "بدون وزن"}kg × ${lastReps} تکرار × ${lastSets} ست`;
+  let strategy = "steady";
 
-  if (progressionType === "reps_then_load") {
+  if (trend.needsConsolidation) {
+    suggestedWeight = lastWeight;
+    suggestedReps = Math.max(min, lastReps || min);
+    strategy = "consolidate";
+    message = "چند جلسه اخیر کامل ثبت نشده. اول همین نسخه را تمیز و کامل اجرا کن، بعد سراغ افزایش برو.";
+  } else if (trend.stalled && lastWeight > 0) {
+    suggestedWeight = lastWeight;
+    suggestedReps = Math.max(min, lastReps || min);
+    strategy = "hold";
+    message = `پیشروی این حرکت کمی ایست کرده. یک جلسه دیگر ${lastWeight}kg را با فرم تمیز تثبیت کن و بعد افزایش بده.`;
+  } else if (progressionType === "reps_then_load") {
     if (lastReps >= max && lastWeight > 0) {
       suggestedWeight = Number((lastWeight + 2.5).toFixed(1));
       suggestedReps = min;
+      strategy = "increase_load";
       message = `آخرین ست به سقف بازه رسید. جلسه بعد ${suggestedWeight}kg را با ${min}-${max} تکرار شروع کن.`;
     } else {
       suggestedReps = Math.min(max, Math.max(min, lastReps + 1));
+      strategy = "increase_reps";
       message = `اولویت جلسه بعد: با ${lastWeight || "وزن فعلی"}kg یک تکرار بیشتر بزن و به بازه ${min}-${max} نزدیک شو.`;
     }
   } else if (progressionType === "reps") {
     suggestedReps = Math.min(max, Math.max(min, lastReps + 1));
+    strategy = "increase_reps";
     message = `برای جلسه بعد روی ${suggestedReps} تکرار با فرم تمیز تمرکز کن.`;
   } else if (progressionType === "time") {
     suggestedReps = Math.min(max, Math.max(min, lastReps + 5));
+    strategy = "extend_time";
     message = `برای جلسه بعد کمی زمان/تکرار را بالا ببر و فرم را حفظ کن.`;
   } else {
     if (lastReps >= max && lastWeight > 0) {
       suggestedWeight = Number((lastWeight + 2.5).toFixed(1));
       suggestedReps = min;
+      strategy = "increase_load";
       message = `آخرین ثبت خوب بود. جلسه بعد ${suggestedWeight}kg را در بازه ${min}-${max} هدف بگیر.`;
     } else {
       suggestedReps = Math.min(max, Math.max(min, lastReps + 1));
+      strategy = "increase_reps";
       message = `قبل از افزایش وزنه، همین وزنه را در بازه ${min}-${max} کامل‌تر کن.`;
     }
   }
@@ -823,6 +886,12 @@ function getProgressionSuggestion(exercise, prescription, logs = []) {
     suggestedReps: suggestedReps || "",
     suggestedSets: targetSets,
     message,
+    strategy,
+    trend_label: trend.trendLabel,
+    average_reps: trend.averageReps ? Number(trend.averageReps.toFixed(1)) : null,
+    average_adherence: typeof trend.averageAdherence === "number"
+      ? Math.round(trend.averageAdherence * 100)
+      : null,
   };
 }
 
@@ -2368,6 +2437,28 @@ function GymApp({ user, onLogout }) {
                 }}>
                   <div style={{ fontWeight: 700, marginBottom: 4 }}>پیشنهاد پیشروی جلسه بعد</div>
                   <div style={{ marginBottom: 8 }}>{activeExerciseProgression.message}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                    {activeExerciseProgression.strategy && (
+                      <span style={s.tag(
+                        activeExerciseProgression.strategy === "increase_load" ? "#0a8a2e"
+                          : activeExerciseProgression.strategy === "consolidate" ? "#b88400"
+                          : activeExerciseProgression.strategy === "hold" ? "#8a450a"
+                          : "#6d4cc2"
+                      )}>
+                        {activeExerciseProgression.strategy === "increase_load" ? "افزایش وزنه"
+                          : activeExerciseProgression.strategy === "increase_reps" ? "افزایش تکرار"
+                          : activeExerciseProgression.strategy === "consolidate" ? "تثبیت اجرا"
+                          : activeExerciseProgression.strategy === "hold" ? "نگه‌داشتن بار"
+                          : "پیشروی پایه"}
+                      </span>
+                    )}
+                    {typeof activeExerciseProgression.average_adherence === "number" && (
+                      <span style={s.tag("#444")}>میانگین پایبندی اخیر: {activeExerciseProgression.average_adherence}%</span>
+                    )}
+                    {typeof activeExerciseProgression.average_reps === "number" && (
+                      <span style={s.tag("#444")}>میانگین تکرار اخیر: {activeExerciseProgression.average_reps}</span>
+                    )}
+                  </div>
                   <button
                     style={{ ...s.btn("#6d4cc2"), color: "#fff", padding: "6px 10px", fontSize: 12 }}
                     onClick={() => setActiveSet(s => ({

@@ -139,6 +139,28 @@ const DEMO_USER = {
 const TRUST_BASELINE_COPY = "این برنامه از روی هدف، سطح، تعداد جلسات، تجهیزات، ریکاوری و محدودیت‌های ثبت‌شده تو ساخته می‌شود و قرار نیست جای تشخیص پزشکی یا مربی حضوری را بگیرد.";
 const DISCLAIMER_BASELINE_COPY = "اگر درد، آسیب، یا وضعیت پزشکی خاص داری، قبل از اجرای برنامه با متخصص واجد صلاحیت مشورت کن و هر حرکت دردزا را متوقف کن.";
 
+function hasMeaningfulLimitations(limitations = []) {
+  return Array.isArray(limitations) && limitations.length > 0 && !limitations.includes("ندارم");
+}
+
+function isPromptLimitationSensitive(prompt = "") {
+  const text = String(prompt).toLowerCase();
+  const patterns = [
+    "درد", "آسیب", "زانو", "کمر", "شانه", "گردن", "مچ", "لگن",
+    "pain", "injury", "knee", "back", "shoulder", "neck", "wrist", "hip",
+    "physio", "rehab", "توانبخشی", "فیزیوتراپی", "پزشک",
+  ];
+  return patterns.some(pattern => text.includes(pattern));
+}
+
+function getAiSafetyMode({ limitations = [], prompt = "" }) {
+  const hasLimitations = hasMeaningfulLimitations(limitations);
+  const promptSensitive = isPromptLimitationSensitive(prompt);
+  if (hasLimitations && promptSensitive) return "high";
+  if (hasLimitations || promptSensitive) return "elevated";
+  return "normal";
+}
+
 // ── Onboarding ──────────────────────────────────────────────────────────────
 function Onboarding({ baseUser, onFinish }) {
   const accent = "#e8ff00";
@@ -2568,6 +2590,20 @@ function GymApp({ user, onLogout }) {
     { label: "split", value: currentWorkoutContext?.split_family || recommendedProgram.split.split_family || "نامشخص" },
     { label: "محدودیت‌ها", value: (userProfile.injury_or_limitation_flags || []).join("، ") || "ندارد" },
   ];
+  const aiSafetyMode = getAiSafetyMode({
+    limitations: userProfile.injury_or_limitation_flags || [],
+    prompt: aiPrompt,
+  });
+  const aiSafetyTitle = aiSafetyMode === "high"
+    ? "حالت محافظه‌کارانه بالا فعال است"
+    : aiSafetyMode === "elevated"
+      ? "حالت محافظه‌کارانه فعال است"
+      : "حالت پاسخ عمومی فعال است";
+  const aiSafetyCopy = aiSafetyMode === "high"
+    ? "به‌خاطر محدودیت ثبت‌شده و محتوای ریسکی سؤال، پاسخ AI باید محافظه‌کارانه بماند، از تشخیص و فشار روی ناحیه درد دوری کند، و توقف حرکت دردزا/ارجاع به متخصص را یادآوری کند."
+    : aiSafetyMode === "elevated"
+      ? "در این سؤال یا پروفایل، نشانه‌ای از محدودیت/درد وجود دارد. پاسخ باید محتاط بماند و از توصیه فشار مستقیم روی ناحیه حساس دوری کند."
+      : "در این حالت، AI فقط راهنمایی عمومی تمرینی می‌دهد و همچنان جای متخصص حضوری را نمی‌گیرد.";
   const applyProgressionTestScenario = (scenario) => {
     if (!activeExercisePrescription) return;
     setProgressionTestScenario(scenario);
@@ -2849,6 +2885,13 @@ function GymApp({ user, onLogout }) {
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
           system: `تو یه مربی بدنسازی حرفه‌ای ایرانی هستی. جواب‌ها را به فارسی و کوتاه بده.
+قواعد ایمنی:
+- هرگز نقش پزشک، فیزیوتراپیست یا تشخیص‌گر آسیب را بازی نکن.
+- اگر محدودیت، درد، یا آسیب در پروفایل یا سؤال دیده می‌شود، پاسخ را محافظه‌کارانه نگه دار.
+- حرکت دردزا را تایید نکن؛ بگو متوقفش کند و فقط جایگزین‌های کم‌ریسک/عمومی پیشنهاد بده.
+- برای ناحیه درد یا آسیب، افزایش بار، افزایش فشار، یا نسخه تهاجمی نده.
+- اگر درد مداوم، درد تیز، بی‌حسی، یا علائم پزشکی مطرح شد، صریحاً ارجاع به متخصص واجد صلاحیت بده.
+- اگر اطلاعات کافی برای توصیه ایمن نداری، عدم قطعیت را واضح بگو و محافظه‌کار بمان.
 پروفایل کاربر:
 - نام: ${userProfile.name} | جنسیت: ${userProfile.sex || "؟"} | سن: ${runtimeUser.age || "؟"} | قد: ${runtimeUser.height || "؟"}cm | وزن: ${runtimeUser.weight || "؟"}kg
 - هدف: ${userProfile.goal || "؟"} | سطح: ${userProfile.level || "؟"}
@@ -2856,7 +2899,8 @@ function GymApp({ user, onLogout }) {
 - ریکاوری: ${userProfile.recovery_quality || "؟"} | محدودیت‌ها: ${(userProfile.injury_or_limitation_flags || []).join("، ") || "ندارم"}
 - برنامه فعال: ${currentWorkoutContext?.program_name || "ندارد"}${currentWorkoutContext?.day_name ? ` · ${currentWorkoutContext.day_name}` : ""}
 - split فعلی: ${currentWorkoutContext?.split_family || recommendedProgram.split.split_family}
-- حرکات سازگار فعلی: ${userFilteredExercises.slice(0, 6).map(ex => ex.name).join("، ") || "نامشخص"}`,
+- حرکات سازگار فعلی: ${userFilteredExercises.slice(0, 6).map(ex => ex.name).join("، ") || "نامشخص"}
+- حالت ایمنی فعلی AI: ${aiSafetyMode}`,
           messages: [{ role: "user", content: aiPrompt }]
         })
       });
@@ -3871,6 +3915,23 @@ function GymApp({ user, onLogout }) {
                     </div>
                   ))}
                 </div>
+              </div>
+              <div style={{
+                background: aiSafetyMode === "high"
+                  ? (dark ? "#24110c" : "#fff1eb")
+                  : aiSafetyMode === "elevated"
+                    ? (dark ? "#21190d" : "#fff7ea")
+                    : (dark ? "#121820" : "#f7fbff"),
+                border: `1px solid ${aiSafetyMode === "high" ? "#c43c3c" : aiSafetyMode === "elevated" ? "#b88400" : "#2f6ea5"}`,
+                borderRadius: 12,
+                padding: "10px 12px",
+                marginBottom: 12,
+                fontSize: 12,
+                color: sub,
+                lineHeight: 1.9,
+              }}>
+                <div style={{ fontWeight: 700, color: text, marginBottom: 6 }}>{aiSafetyTitle}</div>
+                <div>{aiSafetyCopy}</div>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
                 {["برنامه هفته آینده؟", "برای حجم چی بخورم؟", "چطور زانو درد ندم؟", "بهترین حرکت سرشانه؟"].map(q => (

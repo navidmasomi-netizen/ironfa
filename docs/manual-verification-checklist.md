@@ -200,6 +200,7 @@ Use this section to record issues found during the pass:
 - [x] Switching programs or days now resets stale weight/reps/sets in the active workout form.
 - [x] Progress tab session stats now use completed workout history only.
 - [x] Invalid or stale restored exercise selections now reset the active workout form instead of carrying old values.
+- [x] Finishing a workout now stops the active rest timer instead of leaving it running behind the popup.
 
 ### Runtime Checks Still To Execute
 

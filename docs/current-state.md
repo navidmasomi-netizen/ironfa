@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `9119959`
-- Commit message: `Add local runtime verification harness`
+- Latest implementation commit: `06e6cd4`
+- Commit message: `Stop rest timer when finishing workout`
 
 ---
 
@@ -44,6 +44,7 @@ The project now has:
 - progress tab stats now read only completed workout history, not the active workout draft
 - invalid restored or stale exercise selections now reset the active workout form instead of carrying old values
 - a local Vite runtime harness now exists for real browser verification
+- finishing a workout now also stops the active rest timer
 
 The project is now in:
 - implementation
@@ -294,6 +295,7 @@ Implemented:
 - completion guidance tone and copy now adapt to adherence quality
 - completion guidance can tell the user to finish the current day before moving on
 - completion popup now explains why that next-step guidance was chosen
+- finishing the workout now also clears the active rest timer
 
 ### K. Persistence
 Core workout loop data is now persisted.

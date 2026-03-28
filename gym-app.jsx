@@ -952,6 +952,91 @@ function getTrendDirection(currentValue, previousValue, epsilon = 0.01) {
   return "flat";
 }
 
+function getGoalSpecificProgressInterpretation({
+  goal,
+  totalWeightChange,
+  adherenceTrendDirection,
+  volumeTrendDirection,
+  recentAverageAdherence,
+  weeklySessionCount,
+}) {
+  const normalizedGoal = normalizeSplitGoal(goal);
+
+  if (normalizedGoal === "hypertrophy") {
+    if (adherenceTrendDirection === "up" && (volumeTrendDirection === "up" || volumeTrendDirection === "flat")) {
+      return {
+        title: "مسیر عضله‌سازی فعلاً درست است",
+        tone: "strong",
+        summary: "برای هدف حجم، بالا رفتن پایبندی همراه با حفظ یا رشد حجم تمرین نشانه خوبی است.",
+      };
+    }
+    if (weeklySessionCount < 2) {
+      return {
+        title: "برای عضله‌سازی هنوز ریتم کافی نداری",
+        tone: "caution",
+        summary: "برای این هدف، ثبات جلسه‌ها از نوسان‌های مقطعی مهم‌تر است. اول ریتم هفتگی را پایدار کن.",
+      };
+    }
+    return {
+      title: "عضله‌سازی جلو می‌رود، ولی هنوز جا برای ثبات بیشتر هست",
+      tone: "steady",
+      summary: "برای این هدف، ترکیب پایبندی بالا و حجم تمرین پایدار مهم‌ترین نشانه پیشرفت است.",
+    };
+  }
+
+  if (normalizedGoal === "strength") {
+    if (adherenceTrendDirection === "up" && recentAverageAdherence !== null && recentAverageAdherence >= 85) {
+      return {
+        title: "برای قدرت، کیفیت اجرا رو به بهتر شدن است",
+        tone: "strong",
+        summary: "در هدف قدرت، پایبندی به نسخه و کیفیت ست‌ها از صرفاً بالا رفتن حجم مهم‌تر است.",
+      };
+    }
+    return {
+      title: "قدرت بیشتر به اجرای تمیز وابسته است",
+      tone: "steady",
+      summary: "برای این هدف، اگر کیفیت و پایبندی نوسان داشته باشند، بهتر است فعلاً روی اجرای دقیق و ریکاوری بمانی.",
+    };
+  }
+
+  if (normalizedGoal === "fat_loss") {
+    const numericWeightChange = Number(totalWeightChange);
+    if (!Number.isNaN(numericWeightChange) && numericWeightChange < 0 && adherenceTrendDirection !== "down") {
+      return {
+        title: "برای چربی‌سوزی مسیر فعلاً قابل‌قبول است",
+        tone: "strong",
+        summary: "افت وزن همراه با حفظ پایبندی تمرینی نشانه خوبی است، حتی اگر حجم تمرین خیلی بالا نرود.",
+      };
+    }
+    return {
+      title: "چربی‌سوزی را با ثبات تمرین دنبال کن",
+      tone: "steady",
+      summary: "برای این هدف، افت پایبندی یا ریتم ناپایدار خیلی سریع کیفیت خروجی را پایین می‌آورد.",
+    };
+  }
+
+  if (normalizedGoal === "recomposition") {
+    if (adherenceTrendDirection === "up" && weeklySessionCount >= 2) {
+      return {
+        title: "برای ریکامپوزیشن ثباتت رو به بهتر شدن است",
+        tone: "strong",
+        summary: "در این هدف، ثبات تمرین و اجرای نزدیک به نسخه از نوسان‌های شدید وزن مهم‌تر است.",
+      };
+    }
+    return {
+      title: "ریکامپوزیشن به صبر و ثبات نیاز دارد",
+      tone: "steady",
+      summary: "برای این هدف، بهتر است روی ثبات sessionها و حفظ کیفیت اجرای برنامه متمرکز بمانی.",
+    };
+  }
+
+  return {
+    title: "روند کلی تمرینت در حال شکل‌گیری است",
+    tone: "steady",
+    summary: "هنوز بهتر است روی ثبات اجرا و پایبندی به نسخه تمرکز کنی.",
+  };
+}
+
 function getProgressionSuggestion(exercise, prescription, logs = []) {
   if (!exercise || !prescription) return null;
   const { min, max } = parseRepRange(prescription.rep_range);
@@ -2382,6 +2467,14 @@ function GymApp({ user, onLogout }) {
   const totalWeightChange = currentWeightValue !== null && startingWeightValue !== null
     ? (currentWeightValue - startingWeightValue).toFixed(1)
     : "0.0";
+  const goalSpecificProgress = getGoalSpecificProgressInterpretation({
+    goal: runtimeUser.goal,
+    totalWeightChange,
+    adherenceTrendDirection,
+    volumeTrendDirection,
+    recentAverageAdherence,
+    weeklySessionCount: weeklySessionKeys.length,
+  });
   const parsedNewWeight = Number(newWeight);
 
   const userFilteredExercises = filterExercisesForUser(EXERCISES, runtimeUser);
@@ -3554,6 +3647,43 @@ function GymApp({ user, onLogout }) {
                     • میانگین حجم ۳ جلسه اخیر: {recentAverageVolume} در برابر {previousAverageVolume} در ۳ جلسه قبل
                   </div>
                 )}
+              </div>
+            </div>
+
+            <div
+              style={{
+                ...s.card,
+                background: goalSpecificProgress.tone === "strong"
+                  ? (dark ? "#0f1911" : "#f1fff2")
+                  : goalSpecificProgress.tone === "caution"
+                    ? (dark ? "#1f1408" : "#fff8ea")
+                    : (dark ? "#15131d" : "#f7f3ff"),
+                border: `1px solid ${goalSpecificProgress.tone === "strong"
+                  ? "#0a8a2e"
+                  : goalSpecificProgress.tone === "caution"
+                    ? "#b88400"
+                    : "#6d4cc2"}`,
+              }}
+            >
+              <div style={{ fontWeight: 800, marginBottom: 8 }}>
+                تفسیر این روند برای هدف {getDisplayGoal(runtimeUser.goal)}
+              </div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 900,
+                  marginBottom: 6,
+                  color: goalSpecificProgress.tone === "strong"
+                    ? "#0a8a2e"
+                    : goalSpecificProgress.tone === "caution"
+                      ? "#b88400"
+                      : "#8a5cff",
+                }}
+              >
+                {goalSpecificProgress.title}
+              </div>
+              <div style={{ color: sub, fontSize: 12, lineHeight: 1.9 }}>
+                {goalSpecificProgress.summary}
               </div>
             </div>
 

@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `5c70454`
-- Commit message: `Make prescriptions adapt to session history`
+- Latest implementation commit: `5f2f9c7`
+- Commit message: `Use completed workout history for adaptive plans`
 
 ---
 
@@ -37,6 +37,7 @@ The project now has:
 - a full explanation layer for why the current program was selected and what may change it
 - deeper explainability inside workout progression and completion feedback
 - history-aware prescription adjustments inside recommended and static programs
+- adaptive plans now read only completed workout history, not the active workout draft
 
 The project is now in:
 - implementation
@@ -311,6 +312,7 @@ Implemented:
 - prevent invalid log entries with non-positive weight or reps
 - protect progress chart calculations when progress data is empty
 - separate current session draft from historical workout data
+- prevent adaptive planning from reacting to unfinished session drafts
 
 ### M. Progress Tab Hardening
 The progress tab now uses more real session-derived data.
@@ -425,6 +427,7 @@ These are active enough to be considered real implemented baselines:
 - separated active workout draft from persisted history
 - deeper explainability inside workout feedback
 - history-aware prescription adjustment inside the plan layer
+- adaptive plans driven only by completed workout history
 
 ### Partially Implemented but Improving
 These are active but still baseline-level:
@@ -467,6 +470,8 @@ The workout layer now also uses recent history to suggest the next session targe
 
 The program layer now also uses session history to slightly reduce, hold, or progress prescriptions before the user even enters the workout screen.
 
+Adaptive plans now read only completed workout history, so unfinished session drafts do not distort the next recommendation.
+
 The runtime layer now also cleans and stabilizes persisted data before using it inside the main loop, and no longer mixes the active session draft with workout history.
 
 The program layer now also explains why the current recommendation was chosen and what future behavior may change it.
@@ -501,6 +506,7 @@ The current MVP backbone now looks like this:
 20. programs tab explains why the current recommendation was chosen and what may change it
 21. workout loop explains why progression and completion guidance were chosen
 22. the plan layer adjusts prescription details from accumulated session history
+23. adaptive planning ignores unfinished session drafts and reads only completed history
 
 This is the strongest implemented loop so far.
 
@@ -526,6 +532,7 @@ Stable enough:
 - explainable recommendation layer
 - explainable workout feedback layer
 - history-aware prescription adaptation
+- adaptive plans isolated from active workout drafts
 - progress tab baseline
 - normalized runtime user approach
 - trust/disclaimer baseline

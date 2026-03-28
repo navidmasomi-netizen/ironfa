@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `1a720e5`
-- Commit message: `Add final release regression checklist`
+- Latest implementation commit: `92202be`
+- Commit message: `Complete long-cycle progression behavior`
 
 ---
 
@@ -52,6 +52,8 @@ The project now has:
 - adaptive prescriptions now adjust rep range and rest range, not only sets and effort
 - progression now includes plateau reset and deload-aware rules
 - browser spot-check confirmed new adaptive copy in the programs tab and progression labels in the workout tab
+- progression test controls now provide deterministic UI triggers for increase-load, increase-reps, plateau-reset, and deload states
+- progression logic now also reads a longer cycle state and can switch between accumulate, intensify, stabilize, and reset phases
 - release-style QA tightening confirmed clean runtime entry and fixed a runtime style warning in the logout button
 - a final release regression checklist now exists for release-candidate gating
 
@@ -530,6 +532,8 @@ This means programs are no longer only split + exercise names. They now carry ba
 
 The workout layer now also uses recent history to suggest the next session target for the active movement, and can hold or consolidate instead of always pushing progression.
 
+The progression layer now also reads a longer cycle from accumulated history, so it can move between accumulation, intensification, stabilization, and reset instead of reacting only to the last few logs.
+
 The program layer now also uses session history to slightly reduce, hold, or progress prescriptions before the user even enters the workout screen.
 
 Adaptive plans now read only completed workout history, so unfinished session drafts do not distort the next recommendation.
@@ -569,6 +573,7 @@ The current MVP backbone now looks like this:
 21. workout loop explains why progression and completion guidance were chosen
 22. the plan layer adjusts prescription details from accumulated session history
 23. adaptive planning ignores unfinished session drafts and reads only completed history
+24. progression can now switch into longer-cycle accumulation, intensification, stabilization, and reset behavior
 
 This is the strongest implemented loop so far.
 
@@ -594,14 +599,14 @@ Stable enough:
 - explainable recommendation layer
 - explainable workout feedback layer
 - history-aware prescription adaptation
+- longer-cycle progression behavior beyond the short-horizon hint layer
 - adaptive plans isolated from active workout drafts
 - progress tab baseline
 - normalized runtime user approach
 - trust/disclaimer baseline
 
 Not yet fully hardened:
-- advanced progression logic
-- broader auto-adjusting prescription updates over time
+- deeper volume-management rules across many weeks
 - richer explanation of why specific exercises were chosen inside exercise-level selection too
 - perfect app-wide normalization
 - full test/runtime verification
@@ -632,7 +637,7 @@ The most logical next work items are:
 2. connect progress history more strongly to goal-specific outcomes
 3. reduce remaining compatibility debt
 4. keep hardening the current loop with runtime verification
-5. connect explainability more directly to auto-adjustments over time
+5. connect explainability more directly to long-cycle auto-adjustments over time
 
 ---
 
@@ -645,7 +650,7 @@ Recommended next focus:
 - keep working from `/Users/user/Desktop/Gym App/gym-app.jsx`
 
 If continuing from the current momentum, the best next topic is:
-- broader prescription auto-adjustment beyond the current conservative layer
+- deeper volume-management and cycle-aware prescription control beyond the current conservative layer
 or
 - runtime verification of the current adaptive loop
 

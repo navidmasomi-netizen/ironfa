@@ -12,8 +12,8 @@ IronFa
 Current working state after moving from specification into real implementation and checkpointing multiple implementation waves.
 
 ## Current Checkpoint
-- Latest implementation commit: `baf84b6`
-- Commit message: `Show active AI context in coach tab`
+- Latest implementation commit: `ff3e0e9`
+- Commit message: `Reduce active compatibility label debt`
 
 ---
 
@@ -47,6 +47,7 @@ The project now has:
 - finishing a workout now also stops the active rest timer
 - the AI tab now visibly shows the active user/program/day context used for coaching prompts
 - a real browser runtime pass has now validated the main user loop end-to-end
+- active UI paths now rely less on legacy display aliases and more on normalized goal/level helpers
 
 The project is now in:
 - implementation
@@ -420,6 +421,8 @@ Already reduced:
 - demo user and signup seed are leaner and closer to V1
 - static programs now use cleaner goal and level vocabulary
 - shared goal and level label maps exist
+- active UI display paths now use normalized goal/level helpers more consistently
+- write paths no longer store `goal_label` explicitly for new onboarding/signup flows
 
 Remaining compatibility debt is now mostly intentional and limited to:
 - legacy aliases preserved in `normalizePersistedUser(...)`

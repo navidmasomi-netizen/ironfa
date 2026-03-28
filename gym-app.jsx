@@ -1844,7 +1844,6 @@ function buildRecommendedProgram(user, logs = []) {
   });
 
   const goalLabel = GOAL_LABELS[split.goal] || "حجم عضلانی";
-  const levelLabel = LEVEL_LABELS[normalizeSplitLevel(normalizedUser.training_level)] || "مبتدی";
 
   const templates = {
     full_body: [
@@ -1893,7 +1892,6 @@ function buildRecommendedProgram(user, logs = []) {
     isRecommended: true,
     name: `پیشنهاد هوشمند — ${SPLIT_LABELS[split.split_family]} ${split.frequency} روزه`,
     training_level: normalizeSplitLevel(normalizedUser.training_level),
-    level: levelLabel,
     goal_key: split.goal,
     goal: goalLabel,
     programming_style: PROGRAMMING_STYLE_LABELS[split.goal] || "پیشروی پایه",
@@ -1927,7 +1925,6 @@ function buildStaticProgram(program, user, logs = []) {
   return {
     ...program,
     goal_key: goalKey,
-    level: LEVEL_LABELS[program.training_level] || program.level,
     goal: GOAL_LABELS[goalKey] || program.goal,
     programming_style: PROGRAMMING_STYLE_LABELS[goalKey] || "پیشروی پایه",
     programming_cue: PROGRAMMING_CUE_LABELS[goalKey] || "",
@@ -1944,7 +1941,7 @@ function buildStaticProgram(program, user, logs = []) {
 
 const PROGRAMS = [
   {
-    id: 1, name: "پایه قدرت — ۳ روز", training_level: "beginner", level: "مبتدی", goal_key: "strength", goal: "قدرت",
+    id: 1, name: "پایه قدرت — ۳ روز", training_level: "beginner", goal_key: "strength", goal: "قدرت",
     days: [
       { day: "روز A", exercises: ["اسکوات", "پرس سینه", "پول‌آپ"] },
       { day: "روز B", exercises: ["ددلیفت", "پرس سرشانه", "جلو بازو"] },
@@ -1952,7 +1949,7 @@ const PROGRAMS = [
     ]
   },
   {
-    id: 2, name: "Push Pull Legs — ۶ روز", training_level: "intermediate", level: "متوسط", goal_key: "hypertrophy", goal: "حجم عضلانی",
+    id: 2, name: "Push Pull Legs — ۶ روز", training_level: "intermediate", goal_key: "hypertrophy", goal: "حجم عضلانی",
     days: [
       { day: "Push", exercises: ["پرس سینه", "پرس سرشانه", "پشت بازو سیمکش"] },
       { day: "Pull", exercises: ["پول‌آپ", "ددلیفت", "جلو بازو"] },
@@ -1960,7 +1957,7 @@ const PROGRAMS = [
     ]
   },
   {
-    id: 3, name: "فول‌بادی — ۴ روز", training_level: "advanced", level: "پیشرفته", goal_key: "fat_loss", goal: "چربی‌سوزی",
+    id: 3, name: "فول‌بادی — ۴ روز", training_level: "advanced", goal_key: "fat_loss", goal: "چربی‌سوزی",
     days: [
       { day: "روز ۱", exercises: ["اسکوات", "پرس سینه", "پول‌آپ", "پلانک"] },
       { day: "روز ۲", exercises: ["ددلیفت", "پرس سرشانه", "جلو بازو", "کرانچ"] },
@@ -2428,7 +2425,7 @@ function GymApp({ user, onLogout }) {
   const userProfile = {
     name: runtimeUser.name,
     goal: runtimeUser.goal,
-    level: runtimeUser.training_level,
+    training_level: runtimeUser.training_level,
     sex: runtimeUser.sex,
     training_days_per_week: runtimeUser.training_days_per_week,
     session_duration: runtimeUser.session_duration,
@@ -2630,7 +2627,7 @@ function GymApp({ user, onLogout }) {
   const planExplanation = buildPlanExplanation(runtimeUser, recommendedProgram);
   const aiContextSummaryItems = [
     { label: "هدف", value: getDisplayGoal(userProfile.goal) },
-    { label: "سطح", value: getDisplayTrainingLevel(userProfile.level) },
+    { label: "سطح", value: getDisplayTrainingLevel(userProfile.training_level) },
     { label: "برنامه فعال", value: currentWorkoutContext?.program_name || "ندارد" },
     { label: "روز فعال", value: currentWorkoutContext?.day_name || "ندارد" },
     { label: "split", value: currentWorkoutContext?.split_family || recommendedProgram.split.split_family || "نامشخص" },
@@ -2940,7 +2937,7 @@ function GymApp({ user, onLogout }) {
 - اگر اطلاعات کافی برای توصیه ایمن نداری، عدم قطعیت را واضح بگو و محافظه‌کار بمان.
 پروفایل کاربر:
 - نام: ${userProfile.name} | جنسیت: ${userProfile.sex || "؟"} | سن: ${runtimeUser.age || "؟"} | قد: ${runtimeUser.height || "؟"}cm | وزن: ${runtimeUser.weight || "؟"}kg
-- هدف: ${userProfile.goal || "؟"} | سطح: ${userProfile.level || "؟"}
+- هدف: ${userProfile.goal || "؟"} | سطح: ${userProfile.training_level || "؟"}
 - تمرین: ${userProfile.training_days_per_week || "؟"} روز/هفته · ${userProfile.session_duration || "؟"} دقیقه · تجهیزات: ${userProfile.equipment_access || "؟"}
 - ریکاوری: ${userProfile.recovery_quality || "؟"} | محدودیت‌ها: ${(userProfile.injury_or_limitation_flags || []).join("، ") || "ندارم"}
 - برنامه فعال: ${currentWorkoutContext?.program_name || "ندارد"}${currentWorkoutContext?.day_name ? ` · ${currentWorkoutContext.day_name}` : ""}

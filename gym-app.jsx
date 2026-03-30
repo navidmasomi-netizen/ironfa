@@ -253,7 +253,7 @@ function getAiSafetyMode({ limitations = [], prompt = "" }) {
 function Onboarding({ baseUser, onFinish }) {
   const accent = "#e8ff00";
   const [step, setStep] = useState(0);
-  const normalizedBaseUser = normalizePersistedUser(baseUser);
+  const sourceUser = baseUser?.onboarded ? normalizePersistedUser(baseUser) : (baseUser || {});
   const normalizeGoal = (value) => ({
     "حجم": "حجم عضلانی",
     "حجم عضلانی": "حجم عضلانی",
@@ -297,17 +297,17 @@ function Onboarding({ baseUser, onFinish }) {
     return clean.length ? clean : ["ندارم"];
   };
   const [data, setData] = useState({
-    goal: normalizeGoal(normalizedBaseUser.goal),
-    training_level: normalizeLevel(normalizedBaseUser.training_level),
-    age: normalizedBaseUser.age || "",
-    sex: normalizeSex(normalizedBaseUser.sex),
-    weight: normalizedBaseUser.weight || "",
-    height: normalizedBaseUser.height || "",
-    training_days_per_week: String(normalizedBaseUser.training_days_per_week || 3),
-    equipment_access: normalizeEquipment(normalizedBaseUser.equipment_access),
-    injury_or_limitation_flags: normalizeLimitations(normalizedBaseUser.injury_or_limitation_flags),
-    session_duration: String(normalizedBaseUser.session_duration || 60),
-    recovery_quality: normalizeRecovery(normalizedBaseUser.recovery_quality),
+    goal: sourceUser.goal ? normalizeGoal(sourceUser.goal) : "",
+    training_level: sourceUser.training_level ? normalizeLevel(sourceUser.training_level) : "",
+    age: sourceUser.age || "",
+    sex: sourceUser.sex ? normalizeSex(sourceUser.sex) : "",
+    weight: sourceUser.weight || "",
+    height: sourceUser.height || "",
+    training_days_per_week: sourceUser.training_days_per_week ? String(sourceUser.training_days_per_week) : "",
+    equipment_access: sourceUser.equipment_access ? normalizeEquipment(sourceUser.equipment_access) : "",
+    injury_or_limitation_flags: Array.isArray(sourceUser.injury_or_limitation_flags) ? sourceUser.injury_or_limitation_flags : [],
+    session_duration: sourceUser.session_duration ? String(sourceUser.session_duration) : "",
+    recovery_quality: sourceUser.recovery_quality ? normalizeRecovery(sourceUser.recovery_quality) : "",
   });
 
   const set = (k, v) => setData(d => ({ ...d, [k]: v }));
@@ -320,7 +320,17 @@ function Onboarding({ baseUser, onFinish }) {
 
   const STEPS = [
     {
-      icon: "🎯", title: "هدف و سطح", subtitle: "اول جهت تمرینت را مشخص کنیم",
+      icon: "🧬", title: "جنسیت", subtitle: "اول جنسیتت را مشخص کن",
+      fields: (
+        <div>
+          <Row label="جنسیت">
+            <Chips options={["مرد", "زن"]} value={data.sex} onChange={v => set("sex", v)} accent={accent} />
+          </Row>
+        </div>
+      )
+    },
+    {
+      icon: "🎯", title: "هدف و سطح", subtitle: "جهت تمرینت را مشخص کنیم",
       fields: (
         <div>
           <Row label="هدف اصلی">
@@ -338,9 +348,6 @@ function Onboarding({ baseUser, onFinish }) {
         <div>
           <Row label="سن (سال)">
             <NumInput value={data.age} onChange={v => set("age", v)} placeholder="مثلاً ۲۵" />
-          </Row>
-          <Row label="جنسیت">
-            <Chips options={["مرد", "زن"]} value={data.sex} onChange={v => set("sex", v)} accent={accent} />
           </Row>
           <Row label="وزن (kg)">
             <NumInput value={data.weight} onChange={v => set("weight", v)} placeholder="مثلاً ۷۵" />
@@ -409,13 +416,13 @@ function Onboarding({ baseUser, onFinish }) {
     if (current.summary) return true;
     switch (step) {
       case 0:
-        return !!data.goal && !!data.training_level;
+        return !!data.sex;
       case 1:
-        return !!data.age && !!data.sex && !!data.weight && !!data.height;
+        return !!data.goal && !!data.training_level;
       case 2:
-        return !!data.training_days_per_week && !!data.equipment_access && !!data.session_duration;
+        return !!data.age && !!data.weight && !!data.height;
       case 3:
-        return !!data.recovery_quality && Array.isArray(data.injury_or_limitation_flags);
+        return !!data.training_days_per_week && !!data.equipment_access && !!data.session_duration && !!data.recovery_quality && Array.isArray(data.injury_or_limitation_flags) && data.injury_or_limitation_flags.length > 0;
       default:
         return true;
     }
@@ -443,7 +450,12 @@ function Onboarding({ baseUser, onFinish }) {
     });
     const users = getUsers();
     const idx = users.findIndex(u => u.id === baseUser.id);
-    if (idx >= 0) { users[idx] = updated; saveUsers(users); }
+    if (idx >= 0) {
+      users[idx] = updated;
+      saveUsers(users);
+    } else {
+      saveUsers([...users, updated]);
+    }
     saveSession(updated);
     onFinish(updated);
   };
@@ -589,26 +601,162 @@ function SelectInput({ value, onChange, options }) {
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 function AuthScreen({ onLogin }) {
-  const [mode, setMode] = useState("login");
+  const [view, setView] = useState("welcome");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [onboardUser, setOnboardUser] = useState(null);
   const [showPass, setShowPass] = useState(false);
 
   const accent = "#e8ff00";
+  const authHero = "/x.png";
   const s = {
-    wrap: { minHeight: "100vh", background: "#0a0a0a", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'Vazirmatn','Tahoma',sans-serif", direction: "rtl", padding: 20 },
-    logo: { fontSize: 48, marginBottom: 8 },
-    brand: { fontSize: 28, fontWeight: 900, color: accent, marginBottom: 4, letterSpacing: -1 },
-    sub: { fontSize: 14, color: "#666", marginBottom: 40 },
-    card: { background: "#141414", border: "1px solid #2a2a2a", borderRadius: 20, padding: 28, width: "100%", maxWidth: 380 },
-    tabs: { display: "flex", marginBottom: 24, background: "#0a0a0a", borderRadius: 12, padding: 4 },
-    tab: (active) => ({ flex: 1, padding: "10px 0", border: "none", borderRadius: 10, fontFamily: "inherit", fontWeight: 700, fontSize: 15, cursor: "pointer", background: active ? accent : "transparent", color: active ? "#000" : "#666", transition: "all 0.2s" }),
-    input: { width: "100%", background: "#1e1e1e", border: "1px solid #2a2a2a", borderRadius: 12, padding: "12px 16px", color: "#f0f0f0", fontSize: 15, fontFamily: "inherit", outline: "none", boxSizing: "border-box", marginBottom: 12 },
-    btn: { width: "100%", background: accent, color: "#000", border: "none", borderRadius: 12, padding: "14px 0", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: "pointer", marginTop: 4 },
-    error: { background: "#1a0a0a", border: "1px solid #5a1a1a", color: "#ff6b6b", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 12, textAlign: "center" },
-    success: { background: "#0a1a0a", border: "1px solid #1a5a1a", color: "#6bff6b", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 12, textAlign: "center" },
+    wrap: {
+      minHeight: "100vh",
+      background: "radial-gradient(circle at top, #171717 0%, #060606 58%, #000 100%)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: "'Vazirmatn','Tahoma',sans-serif",
+      padding: 20,
+      boxSizing: "border-box",
+    },
+    shell: {
+      width: "100%",
+      maxWidth: 420,
+    },
+    heroShell: {
+      position: "relative",
+      minHeight: 760,
+      borderRadius: 28,
+      overflow: "hidden",
+      background: `linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.2) 36%, rgba(0,0,0,0.5) 62%, rgba(0,0,0,0.62) 74%, rgba(0,0,0,0.82) 100%), url("${authHero}") center 27% / 112% auto no-repeat`,
+      padding: 24,
+      boxShadow: "0 28px 80px rgba(0,0,0,0.46)",
+      boxSizing: "border-box",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+    },
+    heroTop: {
+      position: "absolute",
+      inset: 0,
+      zIndex: 1,
+      pointerEvents: "none",
+    },
+    brandWrap: { textAlign: "center", marginTop: 10, position: "relative", zIndex: 1 },
+    brandTitle: { fontSize: 54, fontWeight: 900, color: "#fff", lineHeight: 1, letterSpacing: -2, fontFamily: "'Inter','Vazirmatn','Tahoma',sans-serif" },
+    brandAccent: { color: accent },
+    brandSub: { fontSize: 17, color: "rgba(255,255,255,0.85)", marginTop: 16, letterSpacing: 0.2, fontFamily: "'Inter','Vazirmatn','Tahoma',sans-serif" },
+    langSwitch: {
+      position: "absolute",
+      top: 16,
+      right: 16,
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 3,
+      padding: 4,
+      borderRadius: 999,
+      background: "rgba(15,15,15,0.72)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      backdropFilter: "blur(10px)",
+      direction: "ltr",
+      pointerEvents: "auto",
+    },
+    langPill: (active) => ({
+      minWidth: 28,
+      textAlign: "center",
+      padding: "4px 6px",
+      borderRadius: 999,
+      fontSize: 10,
+      fontWeight: 800,
+      color: active ? "#111" : "#c2c2c2",
+      background: active ? accent : "transparent",
+      fontFamily: "'Inter','Vazirmatn','Tahoma',sans-serif",
+    }),
+    welcomePanel: { marginTop: "auto", paddingTop: 48, position: "relative", zIndex: 1, textAlign: "center" },
+    primaryCta: {
+      width: "80%",
+      background: accent,
+      color: "#000",
+      border: "none",
+      borderRadius: 22,
+      padding: "18px 20px",
+      fontFamily: "'Inter','Vazirmatn','Tahoma',sans-serif",
+      fontWeight: 900,
+      fontSize: 18,
+      cursor: "pointer",
+      boxShadow: "0 5px 11px rgba(180,198,0,0.14)",
+      display: "block",
+      margin: "0 auto",
+    },
+    orRow: { display: "flex", alignItems: "center", gap: 14, margin: "18px 0 16px" },
+    orLine: { height: 1, flex: 1, background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.18) 100%)" },
+    orText: { color: "rgba(255,255,255,0.48)", fontSize: 13, fontWeight: 700, letterSpacing: 1.2, fontFamily: "'Inter','Vazirmatn','Tahoma',sans-serif" },
+    secondaryCta: {
+      width: "80%",
+      background: "rgba(6,6,6,0.72)",
+      color: "#f2f2f2",
+      border: "1px solid rgba(255,255,255,0.16)",
+      borderRadius: 22,
+      padding: "17px 20px",
+      fontFamily: "'Inter','Vazirmatn','Tahoma',sans-serif",
+      fontWeight: 800,
+      fontSize: 17,
+      cursor: "pointer",
+      backdropFilter: "blur(12px)",
+      display: "block",
+      margin: "0 auto",
+    },
+    benefitGrid: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: "12px 16px",
+      marginTop: 28,
+      color: "rgba(255,255,255,0.82)",
+      fontSize: 14,
+      textAlign: "left",
+      direction: "ltr",
+      fontFamily: "'Inter','Vazirmatn','Tahoma',sans-serif",
+    },
+    benefitItem: { display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-start" },
+    microCopy: {
+      marginTop: 18,
+      color: "rgba(255,255,255,0.56)",
+      fontSize: 13,
+      textAlign: "center",
+      fontFamily: "'Inter','Vazirmatn','Tahoma',sans-serif",
+    },
+    loginPanel: {
+      marginTop: "auto",
+      direction: "rtl",
+      position: "relative",
+      zIndex: 1,
+      background: "linear-gradient(180deg, rgba(10,10,10,0.68) 0%, rgba(7,7,7,0.9) 100%)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: 24,
+      padding: 20,
+      backdropFilter: "blur(4px)",
+    },
+    panelHead: { marginBottom: 18, textAlign: "center", position: "relative" },
+    panelTitle: { color: "#fff", fontSize: 22, fontWeight: 900 },
+    panelBack: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      background: "transparent",
+      border: "none",
+      color: "rgba(255,255,255,0.62)",
+      cursor: "pointer",
+      fontSize: 13,
+      fontWeight: 800,
+      fontFamily: "'Inter','Vazirmatn','Tahoma',sans-serif",
+      padding: 0,
+    },
+    input: { width: "100%", background: "rgba(20,20,20,0.92)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: "15px 16px", color: "#f0f0f0", fontSize: 15, fontFamily: "inherit", outline: "none", boxSizing: "border-box", marginBottom: 12 },
+    btn: { width: "100%", background: accent, color: "#000", border: "none", borderRadius: 18, padding: "15px 0", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: "pointer", marginTop: 4, boxShadow: "0 16px 40px rgba(232,255,0,0.22)" },
+    ghostBtn: { width: "100%", background: "rgba(20,20,20,0.92)", color: "#d6d6d6", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: "15px 0", fontFamily: "inherit", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 10 },
+    error: { background: "#1a0a0a", border: "1px solid #5a1a1a", color: "#ff6b6b", borderRadius: 14, padding: "10px 14px", fontSize: 13, marginBottom: 12, textAlign: "center" },
+    cardFooter: { marginTop: 16, color: "#7c7c7c", fontSize: 12, lineHeight: 1.8, textAlign: "center" },
   };
 
   const handle = (field) => (e) => { setForm(f => ({ ...f, [field]: e.target.value })); setError(""); };
@@ -626,74 +774,126 @@ function AuthScreen({ onLogin }) {
   };
 
   const doSignup = () => {
-    if (!form.name || !form.email || !form.password) { setError("همه فیلدها را پر کنید"); return; }
+    if (!form.name || !form.email || !form.password) { setError("نام، ایمیل و رمز عبور را کامل کن"); return; }
     if (form.password.length < 6) { setError("رمز عبور حداقل ۶ کاراکتر باشد"); return; }
     const users = getUsers();
-    const isTestEmail = form.email === "navid.masomi@gmail.com";
-    if (!isTestEmail && users.find(u => u.email === form.email)) { setError("این ایمیل قبلاً ثبت شده است"); return; }
-    const filteredUsers = isTestEmail ? users.filter(u => u.email !== form.email) : users;
-    const newUser = normalizePersistedUser({
+    const existingUser = users.find(u => u.email === form.email);
+    if (existingUser) { setError("این ایمیل قبلاً ثبت شده است"); return; }
+
+    const newUser = {
       id: Date.now(),
-      name: form.name,
-      email: form.email,
+      name: form.name.trim(),
+      email: form.email.trim(),
       password: form.password,
-      goal: "حجم عضلانی",
-      training_level: "مبتدی",
+      goal: "",
+      training_level: "",
+      age: "",
+      sex: "",
+      weight: "",
+      height: "",
+      training_days_per_week: "",
+      equipment_access: "",
+      injury_or_limitation_flags: [],
+      session_duration: "",
+      recovery_quality: "",
       onboarded: false,
-    });
-    saveUsers([...filteredUsers, newUser]);
-    setSuccess("حساب ساخته شد! در حال تکمیل پروفایل...");
-    setTimeout(() => setOnboardUser(newUser), 600);
+    };
+    setError("");
+    setOnboardUser(newUser);
   };
 
   if (onboardUser) return <Onboarding baseUser={onboardUser} onFinish={onLogin} />;
 
   return (
     <div style={s.wrap}>
-      <div style={s.logo}>💪</div>
-      <div style={s.brand}>آیرون‌فا</div>
-      <div style={s.sub}>مربی هوشمند بدنسازی شما</div>
-      <div style={s.card}>
-        <div style={s.tabs}>
-          <button style={s.tab(mode === "login")} onClick={() => { setMode("login"); setError(""); }}>ورود</button>
-          <button style={s.tab(mode === "signup")} onClick={() => { setMode("signup"); setError(""); }}>ثبت‌نام</button>
+      <div style={s.shell}>
+        <div style={s.heroShell}>
+          <div style={s.heroTop}>
+            <div />
+            <div style={s.langSwitch}>
+              <span style={s.langPill(true)}>EN</span>
+              <span style={s.langPill(false)}>PR</span>
+            </div>
+          </div>
+          <div style={s.brandWrap}>
+            <div style={s.brandTitle}>Iron<span style={s.brandAccent}>Fa</span></div>
+            <div style={s.brandSub}>Your Smart Fitness Coach</div>
+          </div>
+          {view === "welcome" ? (
+            <div style={s.welcomePanel}>
+              <button style={s.primaryCta} onClick={() => { setView("signup"); setError(""); }}>🚀 Get Started</button>
+              <div style={s.orRow}>
+                <div style={s.orLine} />
+                <div style={s.orText}>OR</div>
+                <div style={{ ...s.orLine, transform: "scaleX(-1)" }} />
+              </div>
+              <button style={s.secondaryCta} onClick={() => { setView("login"); setError(""); }}>Log In</button>
+              <div style={s.benefitGrid}>
+                {[
+                  "Personalized Plans",
+                  "AI Coach",
+                  "Gamification",
+                  "Adherence Tracking",
+                ].map(item => (
+                  <div key={item} style={s.benefitItem}>
+                    <span style={{ color: accent, fontWeight: 900 }}>✓</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={s.microCopy}>Takes less than 2 minutes</div>
+            </div>
+          ) : (
+            <div style={s.loginPanel}>
+              <div style={s.panelHead}>
+                <button style={s.panelBack} onClick={() => { setView("welcome"); setError(""); }}>Back</button>
+                <div style={s.panelTitle}>{view === "signup" ? "ساخت حساب" : "ورود به اپ"}</div>
+              </div>
+              {error && <div style={s.error}>{error}</div>}
+              {view === "signup" && (
+                <input style={s.input} placeholder="نام" value={form.name} onChange={handle("name")} />
+              )}
+              <input style={s.input} type="email" placeholder="Email" value={form.email} onChange={handle("email")} />
+              <div style={{ position: "relative", marginBottom: 12 }}>
+                <input
+                  style={{ ...s.input, marginBottom: 0, paddingLeft: 44, fontFamily: "'Inter','Vazirmatn','Tahoma',sans-serif" }}
+                  type={showPass ? "text" : "password"}
+                  placeholder="Password"
+                  value={form.password}
+                  onChange={handle("password")}
+                />
+                <button
+                  onClick={() => setShowPass(p => !p)}
+                  style={{
+                    position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer", fontSize: 18,
+                    color: "#666", padding: 0, lineHeight: 1
+                  }}
+                >
+                  {showPass ? "🙈" : "👁️"}
+                </button>
+              </div>
+              <button style={s.btn} onClick={view === "signup" ? doSignup : doLogin}>
+                {view === "signup" ? "ادامه و شروع آنبوردینگ" : "ورود به اپ"}
+              </button>
+              {view === "login" && (
+                <button
+                  style={s.ghostBtn}
+                  onClick={() => {
+                    const normalizedDemo = normalizePersistedUser(DEMO_USER);
+                    saveSession(normalizedDemo);
+                    onLogin(normalizedDemo);
+                  }}
+                >
+                  🎮 ورود با حساب دمو
+                </button>
+              )}
+              <div style={s.cardFooter}>
+                با ورود، برنامه و تاریخچه ذخیره‌شده تو از روی session فعلی بازیابی می‌شود.
+              </div>
+            </div>
+          )}
         </div>
-        {error && <div style={s.error}>{error}</div>}
-        {success && <div style={s.success}>{success}</div>}
-        {mode === "signup" && <input style={s.input} placeholder="نام شما" value={form.name} onChange={handle("name")} />}
-        <input style={s.input} type="email" placeholder="ایمیل" value={form.email} onChange={handle("email")} />
-        <div style={{ position: "relative", marginBottom: 12 }}>
-          <input
-            style={{ ...s.input, marginBottom: 0, paddingLeft: 44 }}
-            type={showPass ? "text" : "password"}
-            placeholder="رمز عبور"
-            value={form.password}
-            onChange={handle("password")}
-          />
-          <button
-            onClick={() => setShowPass(p => !p)}
-            style={{
-              position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-              background: "none", border: "none", cursor: "pointer", fontSize: 18,
-              color: "#666", padding: 0, lineHeight: 1
-            }}
-          >
-            {showPass ? "🙈" : "👁️"}
-          </button>
-        </div>
-        <button style={s.btn} onClick={mode === "login" ? doLogin : doSignup}>
-          {mode === "login" ? "ورود به اپ" : "ساخت حساب"}
-        </button>
-        {mode === "login" && (
-          <button style={{ ...s.btn, background: "#1e1e1e", color: "#aaa", border: "1px solid #2a2a2a", marginTop: 10 }}
-            onClick={() => {
-              const normalizedDemo = normalizePersistedUser(DEMO_USER);
-              saveSession(normalizedDemo);
-              onLogin(normalizedDemo);
-            }}>
-            🎮 ورود با حساب دمو
-          </button>
-        )}
       </div>
     </div>
   );

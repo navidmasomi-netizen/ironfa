@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import GenderStep from './GenderStep.jsx';
 import { tr, localizedLabel } from '../utils/translations.js';
 import {
   SEX_LABELS, GOAL_DISPLAY, LEVEL_DISPLAY, EQUIPMENT_DISPLAY,
@@ -295,6 +296,19 @@ function Onboarding({ baseUser, onFinish, language = "fa", setLanguage = () => {
       ? [{ label: tr(language, "summary_limitations"), val: getDisplayLimitations(data.injury_or_limitation_flags, language) }]
       : []),
   ];
+
+  // Step 0: Full-screen gender selection
+  if (step === 0) {
+    return (
+      <GenderStep
+        value={data.sex}
+        onChange={v => set("sex", v)}
+        onNext={() => setStep(1)}
+        language={language}
+        setLanguage={setLanguage}
+      />
+    );
+  }
 
   return (
     <div style={s.wrap}>

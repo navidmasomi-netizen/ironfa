@@ -1,13 +1,9 @@
 import { useState } from "react";
-import {
-  hashPassword,
-  tr,
-  getUsers,
-  saveSession,
-  normalizePersistedUser,
-  DEMO_USER,
-  Onboarding,
-} from "../App";
+import { hashPassword } from "../utils/crypto.js";
+import { tr } from "../utils/translations.js";
+import { getUsers, saveSession, normalizePersistedUser } from "../utils/storage.js";
+import { DEMO_USER } from "../utils/constants.js";
+import Onboarding from "./Onboarding.jsx";
 
 const styles = {
   wrap: {

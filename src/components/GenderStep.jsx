@@ -8,7 +8,7 @@ export default function GenderStep({ value, onChange, onNext, language, setLangu
 
   const s = {
     wrap: {
-      width: '100%', height: '100%',
+      width: '100%', minHeight: '100vh', height: '100vh',
       background: '#0a0a0a',
       display: 'flex', flexDirection: 'column',
       fontFamily: "'Vazirmatn', Tahoma, sans-serif",
@@ -54,8 +54,8 @@ export default function GenderStep({ value, onChange, onNext, language, setLangu
     },
     cards: {
       flex: 1, display: 'flex', flexDirection: 'column',
-      gap: 10, padding: '0 16px 12px', overflow: 'hidden',
-      minHeight: 0,
+      gap: 10, padding: '0 16px 12px',
+      overflow: 'hidden', minHeight: 0,
     },
     card: (selected) => ({
       flex: 1, borderRadius: 18, overflow: 'hidden',

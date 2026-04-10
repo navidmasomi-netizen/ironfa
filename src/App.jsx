@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 
+async function hashPassword(password) {
+  const msgBuffer = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 const USERS_KEY = "ironfа_users";
 const SESSION_KEY = "ironfa_session";
 const ACTIVE_PLAN_KEY = "ironfa_active_plan";
@@ -695,8 +702,9 @@ function getProgramDayLabel(dayName, language = "fa") {
   return map[dayName] || dayName;
 }
 
+// DEMO_USER password field contains the SHA-256 hash of "ironfa123"
 const DEMO_USER = {
-  id: 0, name: "کاربر دمو", email: "test@ironfa.com", password: "ironfa123",
+  id: 0, name: "کاربر دمو", email: "test@ironfa.com", password: "94100eb4cd8448d3813fb16d8342d3a2c6e9bfbd25641bf14dcbbbc8ad856c63",
   goal: "حجم عضلانی", training_level: "متوسط", age: 25, height: 178, weight: 80, sex: "مرد",
   training_days_per_week: 4, session_duration: 60, equipment_access: "باشگاه کامل", injury_or_limitation_flags: ["ندارم"],
   recovery_quality: "بالا",
@@ -1258,30 +1266,32 @@ function AuthScreen({ onLogin, language = "fa", setLanguage = () => {} }) {
 
   const handle = (field) => (e) => { setForm(f => ({ ...f, [field]: e.target.value })); setError(""); };
 
-  const doLogin = () => {
-    if (form.email === DEMO_USER.email && form.password === DEMO_USER.password) {
+  const doLogin = async () => {
+    const hashed = await hashPassword(form.password);
+    if (form.email === DEMO_USER.email && hashed === DEMO_USER.password) {
       const normalizedDemo = normalizePersistedUser(DEMO_USER);
       saveSession(normalizedDemo); onLogin(normalizedDemo); return;
     }
     const users = getUsers();
-    const user = users.find(u => u.email === form.email && u.password === form.password);
+    const user = users.find(u => u.email === form.email && u.password === hashed);
     if (!user) { setError(tr(language, "invalid_login_error")); return; }
     const normalizedUser = normalizePersistedUser(user);
     saveSession(normalizedUser); onLogin(normalizedUser);
   };
 
-  const doSignup = () => {
+  const doSignup = async () => {
     if (!form.name || !form.email || !form.password) { setError(tr(language, "complete_fields_error")); return; }
     if (form.password.length < 6) { setError(tr(language, "password_length_error")); return; }
     const users = getUsers();
     const existingUser = users.find(u => u.email === form.email);
     if (existingUser) { setError(tr(language, "email_exists_error")); return; }
 
+    const hashedPassword = await hashPassword(form.password);
     const newUser = {
       id: Date.now(),
       name: form.name.trim(),
       email: form.email.trim(),
-      password: form.password,
+      password: hashedPassword,
       goal: "",
       training_level: "",
       age: "",

@@ -4,6 +4,8 @@ import { tr, localizedLabel } from '../utils/translations.js';
 import {
   SEX_LABELS, GOAL_DISPLAY, LEVEL_DISPLAY, EQUIPMENT_DISPLAY,
   RECOVERY_DISPLAY, LIMITATION_DISPLAY,
+  TRUST_BASELINE_COPY, DISCLAIMER_BASELINE_COPY,
+  TRUST_BASELINE_COPY_EN, DISCLAIMER_BASELINE_COPY_EN,
 } from '../utils/constants.js';
 import { getUsers, saveUsers, saveSession, normalizePersistedUser } from '../utils/storage.js';
 
@@ -72,6 +74,33 @@ function SelectInput({ value, onChange, options }) {
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
   );
+}
+
+function getDisplayGoal(value, language) {
+  return localizedLabel(GOAL_DISPLAY, value, language) || value || "—";
+}
+
+function getDisplayTrainingLevel(value, language) {
+  return localizedLabel(LEVEL_DISPLAY, value, language) || value || "—";
+}
+
+function getDisplaySexLabel(value, language) {
+  return localizedLabel(SEX_LABELS, value, language) || value || "—";
+}
+
+function getDisplayEquipmentLabel(value, language) {
+  return localizedLabel(EQUIPMENT_DISPLAY, value, language) || value || "—";
+}
+
+function getDisplayRecoveryLabel(value, language) {
+  return localizedLabel(RECOVERY_DISPLAY, value, language) || value || "—";
+}
+
+function getDisplayLimitations(values, language) {
+  if (!Array.isArray(values) || values.length === 0) return "—";
+  return values
+    .map(value => localizedLabel(LIMITATION_DISPLAY, value, language) || value)
+    .join(language === "fa" ? "، " : ", ");
 }
 
 function Onboarding({ baseUser, onFinish, language = "fa", setLanguage = () => {} }) {

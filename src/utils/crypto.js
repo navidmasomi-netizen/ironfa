@@ -87,7 +87,10 @@ export function needsPasswordUpgrade(storedHash) {
 
 export async function hashPassword(password) {
   if (!hasSecureCrypto()) {
-    throw new Error("secure_crypto_unavailable");
+    // HTTP previews on local networks (for example mobile device testing) do not
+    // expose Web Crypto in all browsers. Keep signup/login usable there with a
+    // legacy fallback; successful logins in secure contexts are upgraded later.
+    return simpleHash(password);
   }
 
   const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));

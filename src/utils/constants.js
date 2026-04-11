@@ -1,6 +1,6 @@
 // Constants extracted from App.jsx
 
-const USERS_KEY = "ironfа_users";
+const USERS_KEY = "ironfa_users";
 const SESSION_KEY = "ironfa_session";
 const ACTIVE_PLAN_KEY = "ironfa_active_plan";
 const WORKOUT_LOG_KEY = "ironfa_workout_log";

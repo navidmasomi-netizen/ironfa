@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { hashPassword } from "../utils/crypto.js";
+import { hashPassword, verifyPassword, needsPasswordUpgrade } from "../utils/crypto.js";
 import { tr } from "../utils/translations.js";
-import { getUsers, saveSession, normalizePersistedUser } from "../utils/storage.js";
+import { getUsers, saveUsers, saveSession, normalizePersistedUser } from "../utils/storage.js";
 import { DEMO_USER } from "../utils/constants.js";
 import Onboarding from "./Onboarding.jsx";
 
@@ -186,20 +186,43 @@ export default function AuthScreen({ onLogin, language = "fa", setLanguage = () 
 
   const closeSheet = () => setSheetView(null);
 
-  const doLogin = async () => {
-    const hashed = await hashPassword(form.password);
-    if (form.email === DEMO_USER.email && hashed === DEMO_USER.password) {
-      const normalizedDemo = normalizePersistedUser(DEMO_USER);
-      saveSession(normalizedDemo);
-      onLogin(normalizedDemo);
-      return;
-    }
-    const users = getUsers();
-    const user = users.find(u => u.email === form.email && u.password === hashed);
-    if (!user) { setError(tr(language, "invalid_login_error")); return; }
+  const toAuthenticatedUser = (user) => {
     const normalizedUser = normalizePersistedUser(user);
-    saveSession(normalizedUser);
-    onLogin(normalizedUser);
+    if (!normalizedUser) return null;
+    const { password: _password, ...safeUser } = normalizedUser;
+    return safeUser;
+  };
+
+  const doLogin = async () => {
+    try {
+      if (form.email === DEMO_USER.email && await verifyPassword(form.password, DEMO_USER.password)) {
+        const demoUser = toAuthenticatedUser(DEMO_USER);
+        saveSession(demoUser);
+        onLogin(demoUser);
+        return;
+      }
+
+      const users = getUsers();
+      const userIndex = users.findIndex(u => u.email === form.email);
+      if (userIndex === -1) { setError(tr(language, "invalid_login_error")); return; }
+
+      const user = users[userIndex];
+      const isValidPassword = await verifyPassword(form.password, user.password);
+      if (!isValidPassword) { setError(tr(language, "invalid_login_error")); return; }
+
+      if (needsPasswordUpgrade(user.password)) {
+        users[userIndex] = { ...user, password: await hashPassword(form.password) };
+        saveUsers(users);
+      }
+
+      const authenticatedUser = toAuthenticatedUser(users[userIndex]);
+      saveSession(authenticatedUser);
+      onLogin(authenticatedUser);
+    } catch (_) {
+      setError(language === "fa"
+        ? "ورود امن در این محیط در دسترس نیست."
+        : "Secure sign-in is unavailable in this environment.");
+    }
   };
 
   const doSignup = async () => {
@@ -213,33 +236,39 @@ export default function AuthScreen({ onLogin, language = "fa", setLanguage = () 
     const existingUser = users.find(u => u.email === form.email);
     if (existingUser) { setError(tr(language, "email_exists_error")); return; }
 
-    const hashedPassword = await hashPassword(form.password);
-    const newUser = {
-      id: Date.now(),
-      name: form.name.trim(),
-      email: form.email.trim(),
-      password: hashedPassword,
-      goal: "",
-      training_level: "",
-      age: "",
-      sex: "",
-      weight: "",
-      height: "",
-      training_days_per_week: "",
-      equipment_access: "",
-      injury_or_limitation_flags: [],
-      session_duration: "",
-      recovery_quality: "",
-      onboarded: false,
-    };
-    setError("");
-    setOnboardUser(newUser);
+    try {
+      const hashedPassword = await hashPassword(form.password);
+      const newUser = {
+        id: Date.now(),
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: hashedPassword,
+        goal: "",
+        training_level: "",
+        age: "",
+        sex: "",
+        weight: "",
+        height: "",
+        training_days_per_week: "",
+        equipment_access: "",
+        injury_or_limitation_flags: [],
+        session_duration: "",
+        recovery_quality: "",
+        onboarded: false,
+      };
+      setError("");
+      setOnboardUser(newUser);
+    } catch (_) {
+      setError(language === "fa"
+        ? "ثبت‌نام امن در این محیط در دسترس نیست."
+        : "Secure sign-up is unavailable in this environment.");
+    }
   };
 
   const doDemoLogin = () => {
-    const normalizedDemo = normalizePersistedUser(DEMO_USER);
-    saveSession(normalizedDemo);
-    onLogin(normalizedDemo);
+    const demoUser = toAuthenticatedUser(DEMO_USER);
+    saveSession(demoUser);
+    onLogin(demoUser);
   };
 
   if (onboardUser) {

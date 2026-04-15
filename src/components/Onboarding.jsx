@@ -355,7 +355,9 @@ function Onboarding({ baseUser, onFinish, language = "fa", setLanguage = () => {
         value={data.workout_plan}
         onChange={v => set("workout_plan", v)}
         onNext={() => setStep(2)}
+        onBack={() => setStep(0)}
         language={language}
+        setLanguage={setLanguage}
       />
     );
   }

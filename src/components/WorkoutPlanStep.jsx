@@ -37,6 +37,21 @@ const WORKOUT_PLANS = [
   },
 ];
 
+const COPY = {
+  fa: {
+    step: "مرحله ۲ از ۶",
+    title: "برنامه تمرینی‌ات را انتخاب کن",
+    cta: "ادامه",
+    back: "بازگشت",
+  },
+  en: {
+    step: "Step 2 of 6",
+    title: "Select your workout plan",
+    cta: "Continue",
+    back: "Back",
+  },
+};
+
 const styles = {
   wrap: {
     minHeight: "100vh",
@@ -51,6 +66,39 @@ const styles = {
     overflowY: "auto",
     padding: "20px 14px 18px",
   },
+  topRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 18,
+  },
+  stepLabel: {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+    color: "rgba(0,0,0,0.44)",
+  },
+  langSwitch: {
+    display: "inline-flex",
+    background: "rgba(0,0,0,0.05)",
+    border: "1px solid rgba(0,0,0,0.10)",
+    borderRadius: 999,
+    padding: 3,
+    direction: "ltr",
+  },
+  langBtn: (active) => ({
+    border: "none",
+    borderRadius: 999,
+    padding: "6px 12px",
+    fontSize: 12,
+    fontWeight: 700,
+    fontFamily: "'Vazirmatn', Tahoma, sans-serif",
+    background: active ? "#111111" : "transparent",
+    color: active ? "#ffffff" : "rgba(0,0,0,0.52)",
+    cursor: "pointer",
+  }),
   header: {
     textAlign: "center",
     fontSize: 24,
@@ -102,16 +150,28 @@ const styles = {
     fontWeight: 900,
     lineHeight: 1.1,
   },
-  enLabel: {
+  secondaryLabel: {
     color: "rgba(255,255,255,0.88)",
-    fontSize: 15,
-    fontWeight: 600,
+    fontSize: 16,
+    fontWeight: 700,
     lineHeight: 1.2,
   },
   footer: {
     padding: "14px 14px 18px",
     borderTop: "1px solid rgba(0,0,0,0.06)",
     background: "#ffffff",
+  },
+  backBtn: {
+    width: "100%",
+    height: 44,
+    border: "none",
+    background: "transparent",
+    color: "rgba(0,0,0,0.48)",
+    fontFamily: "'Vazirmatn', 'Tahoma', sans-serif",
+    fontSize: 15,
+    fontWeight: 700,
+    cursor: "pointer",
+    marginTop: 8,
   },
   continueBtn: (enabled) => ({
     width: "100%",
@@ -134,15 +194,21 @@ export function getWorkoutPlanDisplay(value, language = "fa") {
   return language === "fa" ? `${plan.faLabel} / ${plan.enLabel}` : plan.enLabel;
 }
 
-export default function WorkoutPlanStep({ value, onChange, onNext, language = "fa" }) {
-  const title = language === "fa" ? "برنامه تمرینی‌ات را انتخاب کن" : "Select your workout plan";
-  const continueLabel = language === "fa" ? "ادامه" : "Continue";
+export default function WorkoutPlanStep({ value, onChange, onNext, onBack, language = "fa", setLanguage = () => {} }) {
+  const copy = COPY[language] || COPY.fa;
   const canContinue = Boolean(value);
 
   return (
     <div style={styles.wrap}>
       <div style={styles.body}>
-        <div style={styles.header}>{title}</div>
+        <div style={styles.topRow}>
+          <div style={styles.stepLabel}>{copy.step}</div>
+          <div style={styles.langSwitch}>
+            <button type="button" style={styles.langBtn(language === "fa")} onClick={() => setLanguage("fa")}>فا</button>
+            <button type="button" style={styles.langBtn(language === "en")} onClick={() => setLanguage("en")}>En</button>
+          </div>
+        </div>
+        <div style={styles.header}>{copy.title}</div>
         <div style={styles.stack}>
           {WORKOUT_PLANS.map((plan) => {
             const selected = value === plan.value;
@@ -155,8 +221,11 @@ export default function WorkoutPlanStep({ value, onChange, onNext, language = "f
               >
                 <div style={styles.cardOverlay} />
                 <div style={styles.cardCopy}>
-                  <div style={styles.faLabel}>{plan.faLabel}</div>
-                  <div style={styles.enLabel}>{plan.enLabel}</div>
+                  {language === "fa" ? (
+                    <div style={styles.faLabel}>{plan.faLabel}</div>
+                  ) : (
+                    <div style={styles.secondaryLabel}>{plan.enLabel}</div>
+                  )}
                 </div>
               </button>
             );
@@ -173,7 +242,10 @@ export default function WorkoutPlanStep({ value, onChange, onNext, language = "f
             onNext();
           }}
         >
-          {continueLabel}
+          {copy.cta}
+        </button>
+        <button type="button" style={styles.backBtn} onClick={onBack}>
+          {copy.back}
         </button>
       </div>
     </div>

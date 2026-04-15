@@ -4,7 +4,7 @@ const GOLD = "#c9a84c";
 
 const COPY = {
   fa: {
-    step: "مرحله ۱ از ۵",
+    step: "مرحله ۱ از ۶",
     title: "جنسیتت را انتخاب کن",
     subtitle: "یکی از کارت‌ها را انتخاب کن تا ادامه فعال شود.",
     male: "مرد",
@@ -12,7 +12,7 @@ const COPY = {
     cta: "ادامه",
   },
   en: {
-    step: "Step 1 of 5",
+    step: "Step 1 of 6",
     title: "Choose your gender",
     subtitle: "Select one card to activate continue.",
     male: "مرد",
@@ -120,16 +120,6 @@ export default function GenderStep({ value, onChange, onNext, language, setLangu
       inset: 0,
       background: "linear-gradient(90deg, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.42) 42%, rgba(0,0,0,0.18) 100%)",
     },
-    label: {
-      position: "absolute",
-      left: 18,
-      top: "50%",
-      transform: "translateY(-50%)",
-      fontSize: 28,
-      fontWeight: 900,
-      letterSpacing: -0.5,
-      textShadow: "0 4px 18px rgba(0,0,0,0.45)",
-    },
     selectedDot: (selected) => ({
       position: "absolute",
       top: 16,
@@ -176,14 +166,12 @@ export default function GenderStep({ value, onChange, onNext, language, setLangu
         <button type="button" style={styles.card(value === "زن")} onClick={() => onChange("زن")}>
           <img style={styles.image} src={FEMALE_PHOTO} alt={copy.female} />
           <div style={styles.overlay} />
-          <div style={styles.label}>{copy.female}</div>
           <div style={styles.selectedDot(value === "زن")} />
         </button>
 
         <button type="button" style={styles.card(value === "مرد")} onClick={() => onChange("مرد")}>
           <img style={styles.image} src={MALE_PHOTO} alt={copy.male} />
           <div style={styles.overlay} />
-          <div style={styles.label}>{copy.male}</div>
           <div style={styles.selectedDot(value === "مرد")} />
         </button>
       </div>

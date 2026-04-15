@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import GenderStep from './GenderStep.jsx';
+import WorkoutPlanStep, { getWorkoutPlanDisplay } from './WorkoutPlanStep.jsx';
 import { tr, localizedLabel } from '../utils/translations.js';
 import {
   SEX_LABELS, GOAL_DISPLAY, LEVEL_DISPLAY, EQUIPMENT_DISPLAY,
@@ -150,6 +151,7 @@ function Onboarding({ baseUser, onFinish, language = "fa", setLanguage = () => {
     return clean.length ? clean : ["ندارم"];
   };
   const [data, setData] = useState({
+    workout_plan: sourceUser.workout_plan || "",
     goal: sourceUser.goal ? normalizeGoal(sourceUser.goal) : "",
     training_level: sourceUser.training_level ? normalizeLevel(sourceUser.training_level) : "",
     age: sourceUser.age || "",
@@ -187,6 +189,10 @@ function Onboarding({ baseUser, onFinish, language = "fa", setLanguage = () => {
           </Row>
         </div>
       )
+    },
+    {
+      icon: "🏋️", title: language === "fa" ? "برنامه تمرینی" : "Workout Plan", subtitle: language === "fa" ? "سبک برنامه‌ای که می‌خواهی روی آن تمرکز کنی انتخاب کن." : "Pick the training style you want to focus on.",
+      fields: null
     },
     {
       icon: "🎯", title: tr(language, "goal_step_title"), subtitle: tr(language, "goal_step_subtitle"),
@@ -271,10 +277,12 @@ function Onboarding({ baseUser, onFinish, language = "fa", setLanguage = () => {
       case 0:
         return !!data.sex;
       case 1:
-        return !!data.goal && !!data.training_level;
+        return !!data.workout_plan;
       case 2:
-        return !!data.age && !!data.weight && !!data.height;
+        return !!data.goal && !!data.training_level;
       case 3:
+        return !!data.age && !!data.weight && !!data.height;
+      case 4:
         return !!data.training_days_per_week && !!data.equipment_access && !!data.session_duration && !!data.recovery_quality;
       default:
         return true;
@@ -284,6 +292,7 @@ function Onboarding({ baseUser, onFinish, language = "fa", setLanguage = () => {
   const finish = () => {
     if (!isStepValid()) return;
     const cleanedOnboardingData = {
+      workout_plan: data.workout_plan,
       goal: data.goal,
       training_level: data.training_level,
       age: data.age,
@@ -314,6 +323,7 @@ function Onboarding({ baseUser, onFinish, language = "fa", setLanguage = () => {
   };
 
   const summaryItems = [
+    { label: language === "fa" ? "برنامه تمرینی" : "Workout plan", val: getWorkoutPlanDisplay(data.workout_plan, language) },
     { label: tr(language, "summary_goal"), val: getDisplayGoal(data.goal, language), highlight: true },
     { label: tr(language, "summary_level"), val: getDisplayTrainingLevel(data.training_level, language) },
     { label: tr(language, "summary_age_sex"), val: language === "fa" ? `${data.age} سال · ${getDisplaySexLabel(data.sex, language)}` : `${data.age} years · ${getDisplaySexLabel(data.sex, language)}` },
@@ -335,6 +345,17 @@ function Onboarding({ baseUser, onFinish, language = "fa", setLanguage = () => {
         onNext={() => setStep(1)}
         language={language}
         setLanguage={setLanguage}
+      />
+    );
+  }
+
+  if (step === 1) {
+    return (
+      <WorkoutPlanStep
+        value={data.workout_plan}
+        onChange={v => set("workout_plan", v)}
+        onNext={() => setStep(2)}
+        language={language}
       />
     );
   }

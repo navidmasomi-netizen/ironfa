@@ -15,15 +15,15 @@
 ## Project Structure
 
 ```text
-ironfa/
-├── src/          # React frontend
+ironfa repo root/
+├── src/          # React frontend (Vite)
 ├── public/
 ├── backend/      # Express API
 │   ├── src/
 │   ├── prisma/
 │   └── .env
 ├── index.html
-└── vite.config.js
+└── vite.config.js (در ironfa/)
 ```
 
 ## Prerequisites
@@ -49,6 +49,7 @@ npm run dev
 ### 3. Frontend
 
 ```bash
+cd ironfa
 npm install
 npm run dev
 ```
@@ -58,6 +59,12 @@ npm run dev
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/health` | Health check endpoint for the Express API |
+| `POST` | `/api/users` | Register a new user |
+| `POST` | `/api/users/login` | Log in an existing user |
+| `GET` | `/api/workouts` | List workouts |
+| `POST` | `/api/workouts` | Create a workout |
+| `GET` | `/api/exercises` | List exercises |
+| `POST` | `/api/exercises` | Create an exercise |
 
 ## Environment Variables
 

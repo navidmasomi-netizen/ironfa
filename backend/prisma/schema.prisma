@@ -16,20 +16,22 @@ model User {
 }
 
 model Workout {
-  id        Int      @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   title     String
-  date      DateTime @default(now())
+  date      DateTime   @default(now())
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  notes     String?
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercises Exercise[]
 }
 
 model Exercise {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   name      String
   sets      Int
   reps      Int
   weight    Float?
+  createdAt DateTime @default(now())
   workoutId Int
-  workout   Workout @relation(fields: [workoutId], references: [id])
+  workout   Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
 }
